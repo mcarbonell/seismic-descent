@@ -63,6 +63,14 @@ crean interferencia entre dimensiones y correlación espacial real en ND.
 - El gradiente es ~0 (Ackley, mesetas) — limitación compartida con todos los métodos de primer orden
 - El dominio es muy grande y el presupuesto insuficiente (Schwefel)
 
+## Optimizaciones Recientes (v7 - v14)
+
+El desarrollo del algoritmo ha evolucionado superando importantes cuellos de botella:
+- **Gradientes Analíticos ($\mathcal{O}(1)$)**: Calculamos matemáticamente el gradiente del campo RFF, haciendo que evaluar el paso sea casi gratis.
+- **Inversión de Polaridad**: Eliminar la función `abs()` en la amplitud permitió que las montañas mutaran bruscamente en valles durante el ciclo, mejorando el escape radicalmente.
+- **Seismic Swarm (Enjambre vectorizado)**: Usando `numpy`, evaluamos $N$ partículas paralelamente bajo un mismo campo RFF común. Reduce el tiempo de simulación un ~85% preservando resultados comparables.
+- **Parametrización por Ciclos Exactos**: Independización matemática del problema de iteraciones asegurando que el *schedule* siempre decaiga a lo largo de 10 terremotos puros (v14).
+
 ## Instalación
 
 ```bash
@@ -93,19 +101,28 @@ docs/
   findings_v4_rff.md       — Random Fourier Features, resultados Rastrigin ND
   findings_v5_ackley.md    — benchmark Ackley, limitación en mesetas
   findings_v6_schwefel.md  — benchmark Schwefel, perfil completo del algoritmo
+  findings_v7_rastrigin_analytic.md  — Benchmark Rastrigin con gradientes analíticos O(1)
+  findings_v8_no_abs.md              — Efecto contundente de permitir amplitud negativa
+  findings_v9_no_abs_ackley_schwefel.md — Validación en mesetas y en hiper-espacios de Schwefel
+  findings_v10_lengthscale.md        — Diagnóstico sobre la compresión de lengthscales
+  findings_v11_adam.md               — Demostrando porqué Adam Optimizer asfixia el "terremoto"
+  findings_v12_swarm.md              — Seismic Swarm: paralelización del muestreo sobre RFF analítico
+  findings_v13_swarm_d.md            — Enjambre estricto N=D y descubrimiento de trade-off de presupuesto
+  findings_v14_cycles.md             — Parametrización estricta de la oscilación sísmica a 10 ciclos
   chat_arena*.md           — conversación original con la idea
   chat_opus4.6.md          — prototipo inicial
 perlin_opt.py              — implementación 2D original (Perlin noise)
 perlin_opt_nd.py           — extensión ND con value noise
 perlin_opt_nd_fairbench.py — benchmark fair (presupuesto igualado)
-perlin_opt_nd_grf.py       — Seismic Descent con RFF (versión ND definitiva)
+perlin_opt_nd_grf.py       — Seismic Descent con RFF (versión ND definitiva base)
+perlin_opt_nd_grf_analytic*.py — Repositorio incremental de las versiones Analíticas y de Enjambre (v7 a v14)
 benchmark_ackley.py        — benchmark genérico, función Ackley
 benchmark_schwefel.py      — benchmark función Schwefel
 ```
 
 ## Próximos experimentos
 
-- Gradiente analítico para eliminar coste O(D) y dar más pasos con mismo presupuesto
-- Aumentar R (features RFF) y medir trade-off calidad/coste
-- Aplicación a TSP con offsets en distancias
-- Explorar funciones con gradiente informativo pero no multimodales
+- Búsqueda en grilla (Hyperparameter Sweeping) para equilibrar `noise_decay`, `noise_amplitude`, cantidad de ciclos ($K$) según la dimensión.
+- Aplicación de un Momentum ingenuo (Heavy Ball sin regularizador RMS) combinado con lengthscales agrandadas dinámicamente $\propto \sqrt{D}$.
+- Aumentar $R$ (features RFF) y medir trade-off calidad/coste en el rendimiento residual en Altas Dimensiones usando matriz de varianza.
+- Aplicación teórica al problema del Viajante de Comercio (TSP) con adiciones aleatorias de costo-matriz.
