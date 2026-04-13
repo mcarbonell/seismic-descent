@@ -4,3 +4,4 @@ __pycache__/
 _t.py
 _timing.py
 _timing_fair.py
+_*.py
