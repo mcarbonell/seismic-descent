@@ -26,9 +26,18 @@ f_total(x, t) = f_original(x) + A(t) * Perlin(x, t)
 
 | Algoritmo | Éxitos (f<0.5) | Media | Mediana | Evaluaciones |
 |---|---|---|---|---|
-| **Perlin Descent** | **47/50** | **0.139** | **0.100** | 5.000 |
+| **Seismic Descent** | **47/50** | **0.139** | **0.100** | 5.000 |
 | Simulated Annealing | 34/50 | 0.410 | 0.117 | 5.000 |
 | CMA-ES | 11/50 | 1.498 | 0.995 | 50.000 |
+
+## Resultados N-dimensional (Rastrigin, presupuesto igualado, Seismic+RFF)
+
+| Dimensión | Seismic media | SA media | CMA-ES media | Seismic vs SA |
+|---|---|---|---|---|
+| 2D | 0.139 | 0.410 | 1.498 | ✅ gana |
+| 5D | 10.3 | 10.0 | 6.7 | empate |
+| 10D | 45.3 | 54.2 | 16.3 | ✅ gana |
+| 20D | 134 | 171 | 32.5 | ✅ gana |
 
 ## Instalación
 
@@ -52,8 +61,25 @@ docs/
 perlin_opt.py        — implementación y benchmark
 ```
 
+## Estructura
+
+```
+docs/
+  findings_v1.md          — hallazgos sesión 2D
+  findings_v2_nd.md       — extensión ND, diagnóstico del ruido
+  findings_v3_fairbench.md — benchmark con presupuesto igualado
+  findings_v4_rff.md      — Random Fourier Features, resultados finales
+  chat_arena*.md          — conversación original con la idea
+  chat_opus4.6.md         — prototipo inicial
+perlin_opt.py             — implementación 2D original
+perlin_opt_nd.py          — extensión ND con value noise
+perlin_opt_nd_fairbench.py — benchmark fair
+perlin_opt_nd_grf.py      — Seismic Descent con RFF (mejor versión ND)
+```
+
 ## Próximos experimentos
 
-- Escalar a N dimensiones (Simplex Noise) y comparar con CMA-ES en su terreno
-- Probar en Ackley, Schwefel, Griewank
+- Benchmark en Ackley y Schwefel
+- Gradiente analítico para eliminar coste O(D)
+- Aumentar R (features RFF) y medir trade-off calidad/coste
 - Aplicación a TSP con offsets en distancias
