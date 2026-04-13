@@ -55,16 +55,6 @@ python perlin_opt.py
 
 ```
 docs/
-  findings_v1.md     — hallazgos sesión inicial
-  chat_arena.md      — conversación original con la idea
-  chat_opus4.6.md    — prototipo generado por Claude
-perlin_opt.py        — implementación y benchmark
-```
-
-## Estructura
-
-```
-docs/
   findings_v1.md          — hallazgos sesión 2D
   findings_v2_nd.md       — extensión ND, diagnóstico del ruido
   findings_v3_fairbench.md — benchmark con presupuesto igualado
