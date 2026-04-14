@@ -112,20 +112,22 @@ docs/
   findings_v15_reactive.md           — Terremotos desencadenados por estancamiento (Bang-Bang Control)
   findings_v16_momentum.md           — Momentum Crudo (Heavy-Ball) causando efecto honda y pérdida de octavas
   findings_v17_temporal_octaves.md   — Sismos Fractales: aplicación de Series de Fourier a las octavas de amplitud temporales
+  findings_budgets_scale.md          — Evaluación masiva a gran escala (LOW, MEDIUM, HIGH) cruzando CMA-ES
+  summary_of_experiments.md          — Historia completa del origen y métricas tras 24h de hackathon
   chat_arena*.md           — conversación original con la idea
   chat_opus4.6.md          — prototipo inicial
 perlin_opt.py              — implementación 2D original (Perlin noise)
 perlin_opt_nd.py           — extensión ND con value noise
 perlin_opt_nd_fairbench.py — benchmark fair (presupuesto igualado)
 perlin_opt_nd_grf.py       — Seismic Descent con RFF (versión ND definitiva base)
-perlin_opt_nd_grf_analytic*.py — Repositorio incremental de las versiones Analíticas y de Enjambre (v7 a v14)
+perlin_opt_nd_grf_analytic*.py — Repositorio incremental de las versiones Analíticas y de Enjambre (v7 a v17)
 benchmark_ackley.py        — benchmark genérico, función Ackley
 benchmark_schwefel.py      — benchmark función Schwefel
+benchmark_budgets.py       — Herramienta CLI de simulación paramétrica Multi-Presupuesto (Scale Up)
 ```
 
-## Próximos experimentos
+## Próximos experimentos / Futuro del Proyecto
 
-- Búsqueda en grilla (Hyperparameter Sweeping) para equilibrar `noise_decay`, `noise_amplitude`, cantidad de ciclos ($K$) según la dimensión.
-- Aplicación de un Momentum ingenuo (Heavy Ball sin regularizador RMS) combinado con lengthscales agrandadas dinámicamente $\propto \sqrt{D}$.
-- Aumentar $R$ (features RFF) y medir trade-off calidad/coste en el rendimiento residual en Altas Dimensiones usando matriz de varianza.
-- Aplicación teórica al problema del Viajante de Comercio (TSP) con adiciones aleatorias de costo-matriz.
+- **Hyperparameter Sweeping**: Búsqueda en grilla formalizada para ajustar balanceadamente `noise_amplitude` y $K$ (ciclos) cruzado por la varianza de Dimensión $D$.
+- **Extensión a Machine Learning**: Reemplazo directo en Deep Learning cruzando `Seismic Optimizer` en un problema real simple como MNIST, usando las iteraciones de Epoch en vez del budget.
+- **Topologías no Euclidianas**: Posibilidad de redefinir RFF como matriz de Costos para abordar optimización discreta como el Viajante de Comercio (TSP).
