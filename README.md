@@ -2,6 +2,8 @@
 
 An optimization algorithm based on gradient descent over a dynamic landscape perturbed by spatially correlated noise. 
 
+![Seismic Descent](seismic-descent.png)
+
 *Read this documentation in [Spanish](README.es.md)*
 
 ## The Concept

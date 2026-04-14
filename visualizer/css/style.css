@@ -1,0 +1,167 @@
+:root {
+    --bg-color: #0a0a1a;
+    --panel-bg: #12122a;
+    --border-color: #2a2a4a;
+    --text-color: #e0e0f0;
+    --seismic-color: #00ff88;
+    --sa-color: #ff6b6b;
+    --font-ui: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding: 20px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-ui);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    border: 1px solid var(--border-color);
+    background-color: var(--panel-bg);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+header {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+}
+
+.subtitle {
+    color: #8888a0;
+    font-weight: normal;
+}
+
+.main-content {
+    display: flex;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.panel {
+    flex: 1;
+    min-width: 300px;
+    padding: 15px;
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.panel:last-child {
+    border-right: none;
+}
+
+.panel h2 {
+    font-size: 0.9rem;
+    margin: 0 0 10px 0;
+    text-align: center;
+    color: #8888a0;
+}
+
+.canvas-container {
+    background-color: #000;
+    border: 1px solid var(--border-color);
+    width: 100%;
+    max-width: 400px;
+    aspect-ratio: 1;
+    position: relative;
+}
+
+.chart-container {
+    background-color: var(--bg-color);
+    aspect-ratio: 3/4;
+}
+
+canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.controls {
+    padding: 15px 20px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.control-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.control-row:last-child {
+    margin-bottom: 0;
+}
+
+button, select, input {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-family: var(--font-ui);
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #2a2a4a;
+}
+
+input[type="number"] {
+    width: 80px;
+}
+
+.status-bar {
+    padding: 10px 20px;
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.progress-bar {
+    flex-grow: 1;
+    height: 8px;
+    background-color: var(--bg-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #2a2a4a, var(--seismic-color));
+    transition: width 0.1s linear;
+}
+
+@media (max-width: 900px) {
+    .main-content {
+        flex-direction: column;
+    }
+    .panel {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .panel:last-child {
+        border-bottom: none;
+    }
+}

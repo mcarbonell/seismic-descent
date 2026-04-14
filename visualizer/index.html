@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seismic Descent - Interactive Visualizer</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SEISMIC DESCENT <span class="subtitle">— Interactive Visualizer</span></h1>
+        </header>
+
+        <div class="main-content">
+            <div class="panel">
+                <h2>SEISMIC DESCENT</h2>
+                <div class="canvas-container">
+                    <canvas id="seismicCanvas" width="400" height="400"></canvas>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>SIMULATED ANNEALING</h2>
+                <div class="canvas-container">
+                    <canvas id="saCanvas" width="400" height="400"></canvas>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>CONVERGENCE</h2>
+                <div class="canvas-container chart-container">
+                    <canvas id="chartCanvas" width="300" height="400"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-row">
+                <button id="btnPlay">▶ Play</button>
+                <button id="btnPause">⏸ Pause</button>
+                <button id="btnStep">⏭ Step</button>
+                <button id="btnReset">⏮ Reset</button>
+                <label>Speed: <input type="range" id="speedSlider" min="1" max="50" value="2"></label>
+            </div>
+            <div class="control-row">
+                <label>Function: 
+                    <select id="funcSelect">
+                        <option value="rastrigin">Rastrigin</option>
+                        <option value="schwefel">Schwefel</option>
+                    </select>
+                </label>
+                <label>Particles: <input type="number" id="particlesInput" min="1" max="50" value="10"></label>
+                <label>Amplitude: <input type="number" id="ampInput" step="0.5" value="15.0"></label>
+                <label>Steps: <input type="number" id="stepsInput" step="100" value="2000"></label>
+            </div>
+            <div class="control-row">
+                <label><input type="checkbox" id="chkNoise" checked> Noise field</label>
+                <label><input type="checkbox" id="chkTrails" checked> Trajectories</label>
+                <label><input type="checkbox" id="chkOptimum" checked> Global optimum</label>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <span>Step: <span id="lblStep">0/2000</span></span> | 
+            <span>Best f(x): <span id="lblBest">0.0000</span></span> | 
+            <span>A(t): <span id="lblAmp">0.0</span></span> | 
+            <span>Cycle: <span id="lblCycle">0</span></span>
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+    </div>
+
+    <script src="js/functions.js"></script>
+    <script src="js/rff.js"></script>
+    <script src="js/seismic.js"></script>
+    <script src="js/sa.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

@@ -3,6 +3,8 @@
 Algoritmo de optimización basado en descenso de gradiente sobre un paisaje
 dinámico perturbado con ruido correlacionado espacialmente.
 
+![Seismic Descent](seismic-descent.png)
+
 ## La idea
 
 En lugar de dar saltos aleatorios para escapar de mínimos locales (como
