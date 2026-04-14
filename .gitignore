@@ -6,3 +6,6 @@ _timing_fair.py
 _*.py
 
 data/
+exdata/
+ppdata/
+results/
