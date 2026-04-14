@@ -5,3 +5,5 @@ _t.py
 _timing.py
 _timing_fair.py
 _*.py
+
+data/

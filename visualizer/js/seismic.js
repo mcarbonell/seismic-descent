@@ -1,24 +1,27 @@
 class SeismicEngine {
-  constructor(fnConfig, rffField, options = {}) {
+  constructor(fnConfig, options = {}) {
     this.fnConfig = fnConfig;
     this.fn = fnConfig.fn;
     this.grad = fnConfig.grad;
-    this.rff = rffField;
     this.range = fnConfig.range;
     
     this.nParticles = options.nParticles || 10;
     this.dt = options.dt || 0.01;
     this.noiseAmplitude = options.noiseAmplitude || 15.0;
-    this.nCycles = options.nCycles || 10;
     this.nSteps = options.nSteps || 2000;
+    this.morphSteps = options.morphSteps || 100;
     
     this.reset();
   }
   
   reset(seedOffset = 0) {
     this.step = 0;
-    this.t = 0;
-    this.dtNoise = (this.nCycles * Math.PI) / this.nSteps;
+    
+    this.seedA = 1 + seedOffset * 10;
+    this.seedB = 2 + seedOffset * 10;
+    
+    this.fieldA = new RFFField(64, 4, this.seedA, this.range);
+    this.fieldB = new RFFField(64, 4, this.seedB, this.range);
     
     const rng = mulberry32(123 + seedOffset);
     
@@ -41,17 +44,24 @@ class SeismicEngine {
   tick() {
     if (this.step >= this.nSteps) return false;
     
-    const freq = 2.0;
-    const amp = this.noiseAmplitude * Math.sin(this.t * freq);
+    let u = (this.step % this.morphSteps) / this.morphSteps;
+    const weightA = Math.cos(u * Math.PI / 2);
+    const weightB = Math.sin(u * Math.PI / 2);
+    
+    const amp = this.currentAmplitude;
     
     for (let i = 0; i < this.nParticles; i++) {
       const p = this.particles[i];
       
       const [fgx, fgy] = this.grad(p.x, p.y);
-      const rffResult = this.rff.noiseAndGrad(p.x, p.y, this.t, amp);
+      const resA = this.fieldA.noiseAndGrad(p.x, p.y, 0, amp);
+      const resB = this.fieldB.noiseAndGrad(p.x, p.y, 0, amp);
       
-      p.x -= this.dt * (fgx + rffResult.gradX);
-      p.y -= this.dt * (fgy + rffResult.gradY);
+      const noiseGradX = weightA * resA.gradX + weightB * resB.gradX;
+      const noiseGradY = weightA * resA.gradY + weightB * resB.gradY;
+      
+      p.x -= this.dt * (fgx + noiseGradX);
+      p.y -= this.dt * (fgy + noiseGradY);
       
       p.x = Math.max(-this.range, Math.min(this.range, p.x));
       p.y = Math.max(-this.range, Math.min(this.range, p.y));
@@ -60,8 +70,15 @@ class SeismicEngine {
       if (this.trails[i].length > 100) this.trails[i].shift();
     }
     
-    this.t += this.dtNoise;
     this.step++;
+    
+    if (this.step % this.morphSteps === 0) {
+        this.seedA = this.seedB;
+        this.seedB++;
+        this.fieldA = this.fieldB;
+        this.fieldB = new RFFField(64, 4, this.seedB, this.range);
+    }
+    
     this._updateBest();
     return true;
   }
@@ -78,11 +95,12 @@ class SeismicEngine {
   }
   
   get currentAmplitude() {
-    return this.noiseAmplitude * Math.sin(this.t * 2.0);
+    const decayFactor = 1.0 - (this.step / this.nSteps);
+    return this.noiseAmplitude * decayFactor;
   }
   
   get currentCycle() {
-    return Math.floor(this.t / Math.PI);
+    return Math.floor(this.step / this.morphSteps);
   }
   
   get progress() {

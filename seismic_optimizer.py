@@ -11,7 +11,8 @@ class SeismicOptimizer(Optimizer):
     to the loss gradient during the update.
     """
     def __init__(self, params, lr=1e-3, noise_amplitude=1.0, noise_decay=0.9999, 
-                 n_cycles=10, n_octaves=4, R=64, seed=42):
+                 n_cycles=10, n_octaves=4, R=64, seed=42,
+                 adaptive_power=1.0, adaptive_floor=0.0):
         if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
         
@@ -21,7 +22,9 @@ class SeismicOptimizer(Optimizer):
             noise_decay=noise_decay,
             n_cycles=n_cycles,
             n_octaves=n_octaves,
-            R=R
+            R=R,
+            adaptive_power=adaptive_power,
+            adaptive_floor=adaptive_floor
         )
         super(SeismicOptimizer, self).__init__(params, defaults)
         
@@ -57,11 +60,11 @@ class SeismicOptimizer(Optimizer):
             self.state['OMEGAS'].append(omegas)
 
     @torch.no_grad()
-    def step(self, closure=None):
-        loss = None
+    def step(self, closure=None, loss=None):
+        loss_val = None
         if closure is not None:
             with torch.enable_grad():
-                loss = closure()
+                loss_val = closure()
 
         # Update time/amplitude
         t = self.state['t']
@@ -70,6 +73,14 @@ class SeismicOptimizer(Optimizer):
         # Hyperparameters (taking from first group for simplicity)
         group = self.param_groups[0]
         A0 = group['noise_amplitude']
+        
+        # Adaptive Amplitude scaling based on loss
+        # If loss is provided (item), we scale initial A0
+        if loss is not None:
+            power = group.get('adaptive_power', 1.0)
+            floor = group.get('adaptive_floor', 0.0)
+            A0 = A0 * (loss ** power + floor)
+            
         decay = group['noise_decay'] ** step
         n_cycles = group['n_cycles']
         n_octaves = group['n_octaves']

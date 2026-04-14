@@ -4,6 +4,7 @@ let appState = {
   particles: 10,
   amplitude: 15.0,
   steps: 2000,
+  morphSteps: 100,
   speed: 2,
   showNoise: true,
   showTrails: true,
@@ -11,7 +12,7 @@ let appState = {
   seedOffset: 0
 };
 
-let rffField, seismicEngine, saEngine;
+let seismicEngine, saEngine;
 let seismicRenderer, saRenderer, chartRenderer;
 let animationId;
 
@@ -28,6 +29,7 @@ const elements = {
   particlesInput: document.getElementById('particlesInput'),
   ampInput: document.getElementById('ampInput'),
   stepsInput: document.getElementById('stepsInput'),
+  morphStepsInput: document.getElementById('morphStepsInput'),
   chkNoise: document.getElementById('chkNoise'),
   chkTrails: document.getElementById('chkTrails'),
   chkOptimum: document.getElementById('chkOptimum'),
@@ -43,14 +45,14 @@ function init() {
   elements.ampInput.value = fnConfig.recommendedAmplitude;
   appState.amplitude = fnConfig.recommendedAmplitude;
   
-  rffField = new RFFField();
-  
   appState.steps = parseInt(elements.stepsInput.value) || 2000;
+  appState.morphSteps = parseInt(elements.morphStepsInput.value) || 100;
 
-  seismicEngine = new SeismicEngine(fnConfig, rffField, {
+  seismicEngine = new SeismicEngine(fnConfig, {
     nParticles: appState.particles,
     noiseAmplitude: appState.amplitude,
     nSteps: appState.steps,
+    morphSteps: appState.morphSteps
   });
   
   saEngine = new SAEngine(fnConfig, {
@@ -74,12 +76,14 @@ function resetApp() {
   appState.particles = parseInt(elements.particlesInput.value) || 10;
   appState.amplitude = parseFloat(elements.ampInput.value) || 15.0;
   appState.steps = parseInt(elements.stepsInput.value) || 2000;
+  appState.morphSteps = parseInt(elements.morphStepsInput.value) || 100;
   
   const fnConfig = FUNCTIONS[appState.funcId];
   
   seismicEngine.nParticles = appState.particles;
   seismicEngine.noiseAmplitude = appState.amplitude;
   seismicEngine.nSteps = appState.steps;
+  seismicEngine.morphSteps = appState.morphSteps;
   
   saEngine.nSteps = appState.steps;
   
@@ -109,9 +113,7 @@ function drawFrame() {
   seismicRenderer.renderFrame(
     seismicEngine.particles,
     seismicEngine.trails,
-    rffField,
-    seismicEngine.t,
-    seismicEngine.currentAmplitude,
+    seismicEngine,
     appState.showNoise,
     appState.showTrails,
     appState.showOptimum,
@@ -122,7 +124,8 @@ function drawFrame() {
   saRenderer.renderFrame(
     [saEngine.pos],
     [saEngine.trail],
-    null, 0, 0, false,
+    null, 
+    false,
     appState.showTrails,
     appState.showOptimum,
     '#ff6b6b',
@@ -197,6 +200,14 @@ elements.ampInput.addEventListener('change', (e) => {
     appState.amplitude = amp;
     seismicEngine.noiseAmplitude = amp;
     updateUI();
+  }
+});
+
+elements.morphStepsInput.addEventListener('change', (e) => {
+  const steps = parseInt(e.target.value);
+  if (!isNaN(steps) && steps > 0) {
+    appState.morphSteps = steps;
+    seismicEngine.morphSteps = steps;
   }
 });
 

@@ -14,7 +14,7 @@ function gaussianRandom(rng) {
 }
 
 class RFFField {
-  constructor(R = 64, nOctaves = 4, seed = 1) {
+  constructor(R = 64, nOctaves = 4, seed = 1, searchRange = 5.12) {
     this.R = R;
     this.nOctaves = nOctaves;
     const rng = mulberry32(seed);
@@ -23,8 +23,10 @@ class RFFField {
     this.phis = [];
     this.drifts = [];
     
+    const scaleFactor = searchRange / 5.12;
+    
     for (let o = 0; o < nOctaves; o++) {
-      const lengthscale = 2.0 * Math.pow(2.0, o);
+      const lengthscale = scaleFactor * 2.0 * Math.pow(2.0, o);
       const octOmegas = [];
       const octPhis = [];
       const octDrifts = [];

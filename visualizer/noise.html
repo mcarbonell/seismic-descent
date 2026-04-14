@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ergodic Noise Morphing Visualizer</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ERGODIC NOISE <span class="subtitle">— Pure Morphing Exploration</span></h1>
+        </header>
+
+        <div class="main-content" style="justify-content: center; padding: 20px; gap: 20px;">
+            <div class="panel" style="max-width: 450px; flex: none;">
+                <h2>NOISE LANDSCAPE [0, 1]²</h2>
+                <div class="canvas-container" style="max-width: 400px; width: 400px; height: 400px;">
+                    <canvas id="mainCanvas" width="400" height="400"></canvas>
+                </div>
+            </div>
+            
+            <div class="panel" style="max-width: 350px; flex: none; justify-content: flex-start; align-items: stretch;">
+                <h2>STATISTICS</h2>
+                <div style="font-family: var(--font-mono); font-size: 1.4rem; margin-top: 20px; text-align: center;">
+                    Coverage: <span id="lblCoverage" style="color: var(--seismic-color); font-weight: bold;">0.0%</span>
+                </div>
+                <div style="font-family: var(--font-mono); font-size: 0.9rem; margin-top: 15px; color: #8888a0; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 4px;">
+                    Landscape A: Seed <span id="lblSeedA" style="color: #fff;">1</span><br>
+                    Landscape B: Seed <span id="lblSeedB" style="color: #fff;">2</span><br>
+                    Morph Progress: <span id="lblMorph" style="color: #fff;">0%</span><br>
+                    Steps: <span id="lblStepCount" style="color: #fff;">0</span>
+                </div>
+                
+                <h2 style="margin-top: 30px;">CONTROLS</h2>
+                <div class="control-row" style="flex-direction: column; align-items: stretch; gap: 15px;">
+                    <label style="display: flex; flex-direction: column; gap: 5px;">
+                        Morph Steps (X): <span id="lblMorphSteps" style="color: var(--seismic-color)">100</span>
+                        <input type="range" id="morphStepsSlider" min="10" max="500" value="100">
+                    </label>
+                    <label style="display: flex; flex-direction: column; gap: 5px;">
+                        Particle dt: <span id="lblDt" style="color: var(--seismic-color)">0.02</span>
+                        <input type="range" id="dtSlider" min="0.001" max="0.1" step="0.001" value="0.02">
+                    </label>
+                    <label style="display: flex; flex-direction: column; gap: 5px;">
+                        Octaves: <span id="lblOctaves" style="color: var(--seismic-color)">4</span>
+                        <input type="range" id="octavesSlider" min="1" max="8" step="1" value="4">
+                    </label>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button id="btnPlay" style="flex: 1; padding: 10px; font-weight: bold; background: var(--seismic-color); color: #000;">▶ Play</button>
+                        <button id="btnPause" style="flex: 1; padding: 10px;" disabled>⏸ Pause</button>
+                    </div>
+                    <button id="btnReset" style="margin-top: 5px; padding: 10px;">⏮ Reset Exploration</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/rff.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/noise.js"></script>
+</body>
+</html>

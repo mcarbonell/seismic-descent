@@ -32,6 +32,21 @@ $$ \nabla_w \eta = -\sqrt{\frac{2}{R}} \cdot A(t) \cdot \sum_{r=1}^R \sin(\omega
 - `noise_decay`: How fast the tremors subside over time.
 - `n_cycles`: The number of full seismic cycles (sine waves) to perform during training.
 - `n_octaves`: Number of spatial noise scales (fractal noise).
+- `adaptive_power`: Power $p$ for loss-based amplitude scaling ($A = A_0 \cdot loss^p$).
+- `adaptive_floor`: Minimum noise intensity constant to avoid zero-noise states.
+
+## Best Practice Configurations (MNIST)
+
+Our benchmarks suggest that unlike standard SGD, Seismic Descent benefits from a higher Learning Rate combined with a lower Noise Amplitude:
+
+| Parameter | Recommended Value |
+| :--- | :--- |
+| `lr` | 0.1 |
+| `noise_amplitude` | 0.1 |
+| `noise_decay` | 0.999 |
+| `n_cycles` | 10+ |
+
+**Observation**: High `noise_amplitude` (>1.0) with high `lr` (>0.01) can cause gradient explosion in neural networks. Keep amplitude subtle for deep learning models.
 
 ## Scalability and Memory
 

@@ -54,6 +54,7 @@
                 <label>Particles: <input type="number" id="particlesInput" min="1" max="50" value="10"></label>
                 <label>Amplitude: <input type="number" id="ampInput" step="0.5" value="15.0"></label>
                 <label>Steps: <input type="number" id="stepsInput" step="100" value="2000"></label>
+                <label>Morph Steps: <input type="number" id="morphStepsInput" step="10" value="100"></label>
             </div>
             <div class="control-row">
                 <label><input type="checkbox" id="chkNoise" checked> Noise field</label>
@@ -65,8 +66,8 @@
         <div class="status-bar">
             <span>Step: <span id="lblStep">0/2000</span></span> | 
             <span>Best f(x): <span id="lblBest">0.0000</span></span> | 
-            <span>A(t): <span id="lblAmp">0.0</span></span> | 
-            <span>Cycle: <span id="lblCycle">0</span></span>
+            <span>Amp: <span id="lblAmp">0.0</span></span> | 
+            <span>Morph Cycles: <span id="lblCycle">0</span></span>
             <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
         </div>
     </div>

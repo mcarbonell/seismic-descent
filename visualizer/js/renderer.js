@@ -71,19 +71,26 @@ class Renderer {
     return [px, py];
   }
   
-  renderNoiseOverlay(rffField, t, amplitude) {
+  renderNoiseOverlay(seismicEngine) {
     const res = 50; 
     const imageData = this.ctx.createImageData(res, res);
     const range = this.fnConfig.range;
     
-    let maxNoise = Math.abs(amplitude) * 2.0; 
+    let amp = seismicEngine.currentAmplitude;
+    let maxNoise = Math.abs(amp) * 2.0; 
     if (maxNoise < 1e-5) maxNoise = 1.0;
+    
+    let u = (seismicEngine.step % seismicEngine.morphSteps) / seismicEngine.morphSteps;
+    const weightA = Math.cos(u * Math.PI / 2);
+    const weightB = Math.sin(u * Math.PI / 2);
     
     for (let py = 0; py < res; py++) {
       for (let px = 0; px < res; px++) {
         const x = (px / res) * 2 * range - range;
         const y = (py / res) * 2 * range - range;
-        const noiseVal = rffField.noiseAndGrad(x, y, t, amplitude).noise;
+        const nA = seismicEngine.fieldA.noiseAndGrad(x, y, 0, amp).noise;
+        const nB = seismicEngine.fieldB.noiseAndGrad(x, y, 0, amp).noise;
+        const noiseVal = weightA * nA + weightB * nB;
         
         let alpha = Math.min(255, Math.abs(noiseVal / maxNoise) * 150);
         let idx = (py * res + px) * 4;
@@ -162,14 +169,14 @@ class Renderer {
     this.ctx.stroke();
   }
   
-  renderFrame(particles, trails, rffField, t, amplitude, showNoise, showTrails, showOptimum, color, glow) {
+  renderFrame(particles, trails, seismicEngine, showNoise, showTrails, showOptimum, color, glow) {
     if (this.baseImage === null) {
       this.precomputeBase();
     }
     this.ctx.drawImage(this.offscreenCanvas, 0, 0, this.width, this.height);
     
-    if (showNoise && Math.abs(amplitude) > 0.01 && rffField) {
-      this.renderNoiseOverlay(rffField, t, amplitude);
+    if (showNoise && seismicEngine && Math.abs(seismicEngine.currentAmplitude) > 0.01) {
+      this.renderNoiseOverlay(seismicEngine);
     }
     
     if (showTrails) {

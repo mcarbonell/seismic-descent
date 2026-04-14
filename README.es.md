@@ -73,6 +73,14 @@ El desarrollo del algoritmo ha evolucionado superando importantes cuellos de bot
 - **Seismic Swarm (Enjambre vectorizado)**: Usando `numpy`, evaluamos $N$ partículas paralelamente bajo un mismo campo RFF común. Reduce el tiempo de simulación un ~85% preservando resultados comparables.
 - **Parametrización por Ciclos Exactos**: Independización matemática del problema de iteraciones asegurando que el *schedule* siempre decaiga a lo largo de 10 terremotos puros (v14).
 
+## Propiedad Clave: Ergodicidad Sísmica
+
+Un descubrimiento fundamental en el desarrollo del algoritmo (consolidado en la v19) es que la exploración generada por el ruido correlacionado debe ser **ergódica**. 
+
+En lugar de sacudir ciegamente a la partícula con "ruido blanco" de alta frecuencia, *Seismic Descent* genera **paisajes topológicos completos y coherentes** de baja y alta frecuencia (mediante octavas de RFF), y realiza un *morphing* (interpolación suave) de un paisaje a otro con el tiempo. 
+
+Esta mutación continua garantiza matemáticamente que una partícula, guiada puramente por el gradiente de este "suelo mutante", acabará explorando y visitando la totalidad del espacio de búsqueda sin quedarse atascada en ciclos infinitos o mesetas. La **ergodicidad** es lo que permite que el enjambre fluya por el terreno como un líquido, garantizando el escape de los mínimos locales más profundos.
+
 ## Instalación
 
 ```bash
@@ -110,6 +118,14 @@ optimizer = SeismicOptimizer(
 ```
 
 Consulta [benchmark_mnist.py](benchmark_mnist.py) para un ejemplo completo y [docs/pytorch_optimizer.es.md](docs/pytorch_optimizer.es.md) para detalles técnicos.
+
+### Último Benchmark (MNIST - 20 Épocas)
+
+| Optimizador | Precisión | Margen |
+| :--- | :--- | :--- |
+| **SGD** | **98.28%** | Base |
+| **Adaptive Floored Seismic** | **97.90%** | ✅ Supera a Adam |
+| **Adam** | 97.79% | - |
 
 ## Estructura
 

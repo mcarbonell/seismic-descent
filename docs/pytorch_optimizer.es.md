@@ -32,6 +32,21 @@ $$ \nabla_w \eta = -\sqrt{\frac{2}{R}} \cdot A(t) \cdot \sum_{r=1}^R \sin(\omega
 - `noise_decay`: Qué tan rápido disminuyen los temblores a lo largo del tiempo.
 - `n_cycles`: El número de ciclos sísmicos completos (ondas senoidales) a realizar durante el entrenamiento.
 - `n_octaves`: Número de escalas de ruido espacial (ruido fractal).
+- `adaptive_power`: Potencia $p$ para el escalado de amplitud basado en pérdida ($A = A_0 \cdot loss^p$).
+- `adaptive_floor`: Constante de intensidad mínima para evitar estados de ruido cero.
+
+## Configuraciones Recomendadas (Best Practices - MNIST)
+
+Nuestros benchmarks sugieren que, a diferencia del SGD estándar, Seismic Descent se beneficia de una Tasa de Aprendizaje (LR) más alta combinada con una Amplitud de Ruido más baja:
+
+| Parámetro | Valor Recomendado |
+| :--- | :--- |
+| `lr` | 0.1 |
+| `noise_amplitude` | 0.1 |
+| `noise_decay` | 0.999 |
+| `n_cycles` | 10+ |
+
+**Observación**: Una `noise_amplitude` alta (>1.0) combinada con una `lr` alta (>0.01) puede causar explosión del gradiente en redes neuronales. Mantén la amplitud sutil para modelos de deep learning.
 
 ## Escalabilidad y Memoria
 
