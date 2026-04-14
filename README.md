@@ -17,7 +17,7 @@ f_total(x, t) = f_original(x) + A(t) * noise(x, t)
 
 - `f_original` — función objetivo real
 - `noise(x, t)` — ruido correlacionado espacialmente (Perlin en 2D, RFF en ND)
-- `A(t) = A0 * |sin(t * freq(t))|` — amplitud cíclica con frecuencia decreciente
+- `A(t) = A0 * sin(t * freq(t))` — amplitud cíclica con frecuencia decreciente
 - El mejor punto se registra siempre contra `f_original`, no contra el paisaje combinado
 
 La clave frente a SA: el ruido es **correlacionado espacialmente** — dos puntos
@@ -109,6 +109,9 @@ docs/
   findings_v12_swarm.md              — Seismic Swarm: paralelización del muestreo sobre RFF analítico
   findings_v13_swarm_d.md            — Enjambre estricto N=D y descubrimiento de trade-off de presupuesto
   findings_v14_cycles.md             — Parametrización estricta de la oscilación sísmica a 10 ciclos
+  findings_v15_reactive.md           — Terremotos desencadenados por estancamiento (Bang-Bang Control)
+  findings_v16_momentum.md           — Momentum Crudo (Heavy-Ball) causando efecto honda y pérdida de octavas
+  findings_v17_temporal_octaves.md   — Sismos Fractales: aplicación de Series de Fourier a las octavas de amplitud temporales
   chat_arena*.md           — conversación original con la idea
   chat_opus4.6.md          — prototipo inicial
 perlin_opt.py              — implementación 2D original (Perlin noise)
