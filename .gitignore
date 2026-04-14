@@ -1,6 +1,5 @@
 __pycache__/
 *.pyc
-*.png
 _t.py
 _timing.py
 _timing_fair.py
