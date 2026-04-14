@@ -93,6 +93,24 @@ python benchmark_ackley.py
 python benchmark_schwefel.py
 ```
 
+## Integración con PyTorch
+
+El algoritmo Seismic Descent ahora está disponible como un optimizador estándar de PyTorch. Esto permite entrenar redes neuronales con "temblores" correlacionados espacialmente para escapar de mínimos locales.
+
+```python
+from seismic_optimizer import SeismicOptimizer
+
+model = MyModel()
+optimizer = SeismicOptimizer(
+    model.parameters(), 
+    lr=0.01, 
+    noise_amplitude=0.5, 
+    n_cycles=10
+)
+```
+
+Consulta [benchmark_mnist.py](benchmark_mnist.py) para un ejemplo completo y [docs/pytorch_optimizer.es.md](docs/pytorch_optimizer.es.md) para detalles técnicos.
+
 ## Estructura
 
 ```

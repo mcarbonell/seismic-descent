@@ -62,6 +62,24 @@ python benchmark_budgets.py --preset med
 python benchmark_budgets.py --preset high
 ```
 
+## PyTorch Integration
+
+The Seismic Descent algorithm is now available as a standard PyTorch optimizer. This allows for training neural networks with spatially correlated "earthquake" tremors to escape local minima.
+
+```python
+from seismic_optimizer import SeismicOptimizer
+
+model = MyModel()
+optimizer = SeismicOptimizer(
+    model.parameters(), 
+    lr=0.01, 
+    noise_amplitude=0.5, 
+    n_cycles=10
+)
+```
+
+See [benchmark_mnist.py](benchmark_mnist.py) for a complete example and [docs/pytorch_optimizer.md](docs/pytorch_optimizer.md) for technical details.
+
 ## Structure
 
 ```
