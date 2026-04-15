@@ -74,7 +74,8 @@ class Explorer1D {
             showTotal: true,
             showHeatmap: true,
             greedy: true,
-            cyclicDt: false
+            cyclicDt: false,
+            autoAmp: false
         };
 
         this.frameCounter = 0;
@@ -109,6 +110,7 @@ class Explorer1D {
         bind('chkShowHeatmap', 'showHeatmap');
         bind('chkGreedy', 'greedy');
         bind('chkCyclicDt', 'cyclicDt');
+        bind('chkAutoAmp', 'autoAmp');
 
         document.getElementById('btnPlay').onclick = () => this.isPlaying = true;
         document.getElementById('btnPause').onclick = () => this.isPlaying = false;
@@ -134,8 +136,11 @@ class Explorer1D {
         // Now working in normalized [-1, 1] space
         this.particles = Array.from({ length: this.config.nParticles }, () => ({
             x: Math.random() * 2 - 1,
-            val: 0
+            val: 0,
+            history: [] // For distance-based stagnation
         }));
+        this.globalBest = Infinity;
+        this.blindAmp = 0.01; // Starts blindly small
     }
 
     clearHeatmap() {
@@ -156,16 +161,21 @@ class Explorer1D {
             if (this.frameCounter % freq === 0) updatesToRun = 1;
         }
 
-        // We pre-calculate vertical range for amplitude normalization if not done
-        // Standard Rastrigin range is ~40, Schwefel ~800, etc.
-        // For simplicity, let's assume amplitude 1.0 = 10% of typical vertical range
-        const verticalScale = (this.config.funcKey === 'schwefel') ? 800 :
-                             (this.config.funcKey === 'rastrigin') ? 40 :
-                             (this.config.funcKey === 'ackley') ? 20 : 10;
-        
+        let currentFrameActiveAmp = 0;
+
         for (let s = 0; s < updatesToRun; s++) {
-            const noiseAmp = this.config.amplitude * 0.01 * verticalScale;
-            const phaseAmp = noiseAmp * Math.sin(this.t * 2.0);
+            let activeAmplitude = 0;
+            if (this.config.autoAmp) {
+                // Pure BBO: Grow exponentially. 2% growth per stagnant step
+                this.blindAmp *= 1.02;
+                activeAmplitude = this.blindAmp;
+            } else {
+                // Manual slider: map 0-100 to an absolute log scale (10^-2 to 10^3)
+                activeAmplitude = Math.pow(10, (this.config.amplitude / 100) * 5 - 2);
+            }
+            currentFrameActiveAmp = activeAmplitude;
+
+            const phaseAmp = activeAmplitude * Math.sin(this.t * 2.0);
             
             // Dynamic dt calculation (decoupled frequency from noise amplitude)
             let activeDt = this.config.dt;
@@ -223,7 +233,37 @@ class Explorer1D {
                         this.heatmap[i] += val;
                     }
                 }
+                
+                // Track history for Auto-Amp
+                p.history.push(p.x);
+                if (p.history.length > 50) p.history.shift();
             });
+
+            // Distance-based Stagnation (Spatial Spread) evaluated discretely every 50 steps
+            if (this.config.autoAmp && this.step > 0 && this.step % 50 === 0) {
+                let maxSpread = 0;
+                this.particles.forEach(p => {
+                    let minX = Infinity;
+                    let maxX = -Infinity;
+                    for (let i = 0; i < p.history.length; i++) {
+                        if (p.history[i] < minX) minX = p.history[i];
+                        if (p.history[i] > maxX) maxX = p.history[i];
+                    }
+                    const spread = maxX - minX;
+                    if (spread > maxSpread) maxSpread = spread;
+                });
+
+                // Discretized Control Loop Actions
+                if (maxSpread < 0.04) {
+                    this.blindAmp *= 2.0; // Double the amplitude if stuck after full window
+                } else if (maxSpread > 0.08) {
+                    this.blindAmp *= 0.5; // Halve it if moving quickly
+                }
+                
+                // Limits to prevent floating point absurdities
+                if (this.blindAmp < 0.01) this.blindAmp = 0.01; 
+                if (this.blindAmp > 1e6) this.blindAmp = 1e6; // Absolute mathematical ceiling
+            }
 
             this.t += dtNoise;
             this.step++;
@@ -234,8 +274,12 @@ class Explorer1D {
         const successfulOnes = this.particles.filter(p => Math.abs(p.x - normMin) < normEpsilon);
         const successRate = (successfulOnes.length / this.particles.length * 100).toFixed(0);
 
+        // Update stats
         document.getElementById('lblStep').innerText = this.step;
-        document.getElementById('lblActiveAmp').innerText = (this.config.amplitude * Math.sin(this.t * 2.0)).toFixed(1) + "%";
+        
+        let displayAmp = currentFrameActiveAmp * Math.sin(this.t * 2.0);
+        document.getElementById('lblActiveAmp').innerText = Math.abs(displayAmp) > 1000 ? displayAmp.toExponential(1) : displayAmp.toFixed(2);
+        
         const avgDiv = this.particles.reduce((a, b) => a + fnInfo.fn(b.x * range), 0) / this.particles.length;
         document.getElementById('lblAvgVal').innerText = avgDiv.toFixed(4);
         
@@ -253,25 +297,33 @@ class Explorer1D {
         
         ctx.clearRect(0, 0, w, h);
 
-        // Map x [-range, range] to [0, w]
-        // Map y [fMin, fMax] to [h, 0]
+        // Pre-calculate rendering amplitude for dynamic camera bounds
+        let renderAmplitude;
+        if (this.config.autoAmp) {
+            renderAmplitude = this.blindAmp;
+        } else {
+            renderAmplitude = Math.pow(10, (this.config.amplitude / 100) * 5 - 2);
+        }
+        const amp = renderAmplitude * Math.sin(this.t * 2.0);
         
-        // Sampling for Y scale
-        let yMin = Infinity, yMax = -Infinity;
+        // Sampling for Y scale based on original function
+        let yMinObj = Infinity, yMaxObj = -Infinity;
         const samples = 100;
-        const vals = [];
         for (let i = 0; i <= samples; i++) {
             const u = -1 + (i / samples) * 2;
             const x = u * range;
             const yObj = fnInfo.fn(x);
-            vals.push(yObj);
-            yMin = Math.min(yMin, yObj);
-            yMax = Math.max(yMax, yObj);
+            yMinObj = Math.min(yMinObj, yObj);
+            yMaxObj = Math.max(yMaxObj, yObj);
         }
+        
+        // Dynamic camera bounds: stretch Y view when amplitude explodes
+        const yMin = yMinObj - renderAmplitude * 1.5;
+        const yMax = yMaxObj + renderAmplitude * 1.5;
         
         // Add some margin to Y
         const yRange = yMax - yMin;
-        const pad = yRange * 0.5; 
+        const pad = Math.max(yRange * 0.1, 0.1); 
         const viewYMin = yMin - pad;
         const viewYMax = yMax + pad;
         
@@ -322,12 +374,6 @@ class Explorer1D {
             ctx.globalAlpha = 1.0;
         };
 
-        const verticalScale = (this.config.funcKey === 'schwefel') ? 800 :
-                             (this.config.funcKey === 'rastrigin') ? 40 :
-                             (this.config.funcKey === 'ackley') ? 20 : 10;
-        const noiseAmp = this.config.amplitude * 0.01 * verticalScale;
-        const amp = noiseAmp * Math.sin(this.t * 2.0);
-
         if (this.config.showObj) {
             drawCurve('#555', (u) => fnInfo.fn(u * range), 0.8);
         }
@@ -335,7 +381,7 @@ class Explorer1D {
         if (this.config.showNoise) {
             drawCurve('#ff6b6b', (u) => {
                 const rffRes = this.rff.noiseAndGrad(u * range, 0, this.t, amp);
-                return rffRes.noise + yMin + yRange/2; 
+                return rffRes.noise + yMinObj + (yMaxObj - yMinObj)/2; 
             }, 0.6);
         }
         

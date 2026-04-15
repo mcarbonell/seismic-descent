@@ -87,14 +87,15 @@
                 <label><input type="checkbox" id="chkShowHeatmap" checked> Show Heatmap</label>
                 <label><input type="checkbox" id="chkGreedy" checked> Greedy (f(x) + noise improves)</label>
                 <label><input type="checkbox" id="chkCyclicDt"> Cyclic dt (dt * |sin(t)|)</label>
+                <label><input type="checkbox" id="chkAutoAmp"> Auto-Amp (Stagnation)</label>
             </div>
         </div>
 
-        <div class="status-bar">
-            <span>Step: <span id="lblStep">0</span></span> | 
-            <span>Active Amp: <span id="lblActiveAmp">0.0</span></span> | 
-            <span>Avg f(x): <span id="lblAvgVal">0.0000</span></span> |
-            <span>Coverage: <span id="lblCoverage">0.0%</span></span>
+        <div class="status-bar" style="font-variant-numeric: tabular-nums;">
+            <span style="display:inline-block; width: 120px;">Step: <span id="lblStep">0</span></span> | 
+            <span style="display:inline-block; width: 160px;">Active Amp: <span id="lblActiveAmp">0.0</span></span> | 
+            <span style="display:inline-block; width: 180px;">Avg f(x): <span id="lblAvgVal">0.0000</span></span> |
+            <span style="display:inline-block; width: 200px;">Coverage: <span id="lblCoverage">0.0%</span></span>
             <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
         </div>
     </div>
