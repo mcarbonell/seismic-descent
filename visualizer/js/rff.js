@@ -26,7 +26,7 @@ class RFFField {
     const scaleFactor = searchRange / 5.12;
     
     for (let o = 0; o < nOctaves; o++) {
-      const lengthscale = scaleFactor * 2.0 * Math.pow(2.0, o);
+      const lengthscale = (scaleFactor * 2.0) / Math.pow(2.0, o);
       const octOmegas = [];
       const octPhis = [];
       const octDrifts = [];

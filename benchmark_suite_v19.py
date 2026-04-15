@@ -95,7 +95,8 @@ def run_single_benchmark(func_config, dims, n_trials, eval_budget_base):
             n_particles=n_particles,
             search_range=search_range,
             noise_amplitude=noise_amp,
-            morph_steps=seismic_steps // 20  # Asegurar varios morphs durante la corrida
+            morph_steps=seismic_steps // 10,
+            n_cycles=10,
         )
         times['seismic_v19'] += time.time() - t0
         results['seismic_v19'].append(float(sval))

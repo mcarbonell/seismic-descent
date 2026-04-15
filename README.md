@@ -49,6 +49,16 @@ Instead of blindly shaking the particle with high-frequency "white noise", *Seis
 
 This continuous mutation mathematically guarantees that a particle, guided purely by the gradient of this "mutating ground", will eventually explore and visit the entirety of the search space without getting trapped in infinite loops or plateaus. **Ergodicity** is what allows the swarm to flow through the terrain like a liquid, guaranteeing an escape from even the deepest local minima.
 
+## Interactive Visualizers
+
+To truly understand how Seismic Descent works, you can explore the algorithm interactively in your browser without any installation:
+
+- **[1D Seismic Explorer](visualizer/1d_explorer.html)**: Visualize how the original function, the seismic noise phase, and the morphed landscape interact. Watch the particles escape local minima and see the "Ergodic Heatmap" prove the organic search space coverage.
+- **[2D Interactive Map](visualizer/index.html)**: Observe the 2D spatial correlation of the Perlin-generated earthquakes visually dragging particles towards the global minimum.
+
+![1D Visualizer Ergodicity](seismic-1d.png)
+*Snapshot of the 1D Visualizer optimizing the highly non-linear Rastrigin function. The green histogram at the bottom (Ergodic Heatmap) perfectly maps the continuous topological exploration of the particle across all local minima basins, tangibly proving the algorithm avoids infinite entrapment.*
+
 ## Installation
 
 ```bash

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seismic 1D Explorer — Landscape Morphing</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        .canvas-container.large {
+            max-width: 1000px;
+            height: 500px;
+            aspect-ratio: unset;
+        }
+        .explorer-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+        }
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 10px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .line-obj { border-bottom: 2px solid #555; width: 20px; }
+        .line-noise { border-bottom: 2px solid var(--sa-color); width: 20px; }
+        .line-total { border-bottom: 2px solid var(--seismic-color); width: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width: 1100px;">
+        <header>
+            <h1>SEISMIC 1D EXPLORER <span class="subtitle">— Landscape Morphing & Ergodicity</span></h1>
+        </header>
+
+        <div class="explorer-layout">
+            <div class="panel" style="border: none; padding: 0;">
+                <div class="canvas-container large">
+                    <canvas id="explorerCanvas"></canvas>
+                </div>
+                <div class="legend">
+                    <div class="legend-item"><div class="line-obj"></div> Original f(x)</div>
+                    <div class="legend-item"><div class="line-noise"></div> Seismic Noise A(t)·n(x,t)</div>
+                    <div class="legend-item" title="Superposition of f(x) and Noise"><div class="line-total"></div> Morphed Landscape</div>
+                    <div class="legend-item" title="Heatmap of particle visits"><span style="background: rgba(0, 255, 136, 0.2); width: 15px; height: 15px; display: inline-block; border-radius: 2px;"></span> Ergodic Heatmap</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-row">
+                <button id="btnPlay">▶ Play</button>
+                <button id="btnPause">⏸ Pause</button>
+                <button id="btnReset">⏮ Reset Particles</button>
+                <button id="btnClearHeatmap">🧹 Clear Heatmap</button>
+                <label>Speed: <input type="range" id="speedSlider" min="0.1" max="5" step="0.1" value="0.5"></label>
+            </div>
+            <div class="control-row">
+                <label>Function: 
+                    <select id="funcSelect">
+                        <option value="rastrigin">Rastrigin</option>
+                        <option value="schwefel">Schwefel</option>
+                        <option value="ackley">Ackley</option>
+                        <option value="parabola">Simple Parabola</option>
+                    </select>
+                </label>
+                <label>Particles: <input type="number" id="particlesInput" min="1" max="50" value="1"></label>
+                <label>Amplitude: <input type="range" id="ampSlider" min="0" max="100" step="1" value="15"></label>
+                <span id="lblAmpVal">15</span>
+            </div>
+            <div class="control-row">
+                <label>Learning Rate (dt): <input type="range" id="dtSlider" min="0.0001" max="0.01" step="0.0001" value="0.002"></label>
+                <span id="lblDtVal">0.002</span>
+                <label>Noise Octaves: <input type="number" id="octavesInput" min="1" max="8" value="4"></label>
+                <label><input type="checkbox" id="chkShowObj" checked> Show f(x)</label>
+                <label><input type="checkbox" id="chkShowNoise" checked> Show Noise</label>
+                <label><input type="checkbox" id="chkShowTotal" checked> Show Morphed</label>
+                <label><input type="checkbox" id="chkShowHeatmap" checked> Show Heatmap</label>
+                <label><input type="checkbox" id="chkGreedy" checked> Greedy (f(x) + noise improves)</label>
+                <label><input type="checkbox" id="chkCyclicDt"> Cyclic dt (dt * |sin(t)|)</label>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <span>Step: <span id="lblStep">0</span></span> | 
+            <span>Active Amp: <span id="lblActiveAmp">0.0</span></span> | 
+            <span>Avg f(x): <span id="lblAvgVal">0.0000</span></span> |
+            <span>Coverage: <span id="lblCoverage">0.0%</span></span>
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+    </div>
+
+    <script src="js/rff.js"></script>
+    <script src="js/explorer_1d.js"></script>
+</body>
+</html>
