@@ -1230,14 +1230,13 @@ Este resultado no sería un teorema formal (faltaría probar que la densidad de 
 > **Ningún archivo existente debe ser modificado.** El nuevo código importa de los archivos existentes sólo cuando es estrictamente necesario (e.g., `from perlin_opt_nd import simulated_annealing_nd` se mantuvo solo en v14 por la falta de un SA genérico; la nueva suite tiene su propio `sa_generic()`).
 
 > [!NOTE]
-> **Funciones adicionales de SFU a considerar (futuro):** Más allá de las 5 ya incluidas (Rastrigin, Schwefel, Ackley, Griewank, Rosenbrock), las funciones más interesantes de la [Virtual Library of Simulation Experiments (SFU)](https://www.sfu.ca/~ssurjano/optimization.html) y el PDF de 30 funciones (`docs/data-07-00046-v2.pdf`) para expandir el benchmark son:
-> - **Levy** — Many Local Minima, N-D, gradiente sencillo. Hermana natural de Rastrigin.
-> - **Styblinski-Tang** — N-D, óptimo en posición no-obvia. Test limpio y barato.
-> - **Michalewicz** — Steep Ridges. Gradiente explosivo + zonas planas. Anti-terreno para SD.
-> - **Eggholder** (solo 2D) — Ideal para el visualizador, paisaje espectacular.
-> - **Drop-Wave** (solo 2D) — Ondas concéntricas, test perfecto para correlación RFF.
->
-> Las funciones Bowl-Shaped (Sphere, Sum Squares) y Plate-Shaped (Booth, Matyas) son irrelevantes — son convexas puras donde cualquier GD trivial converge y Seismic Descent no aporta nada.
+> **Funciones adicionales para la Suite Definitiva (Fase 1 y 2):** Más allá de las 5 ya incluidas empíricamente (Rastrigin, Schwefel, Ackley, Griewank, Rosenbrock), nuestra revisión del paper *A Collection of 30 Multidimensional Functions* (`docs/ACollectionof30MultidimensionalFunctions...xml`) y SFU recomienda añadir como "Jefes Finales" las siguientes patologías matemáticas:
+> - **Weierstrass (F06):** Paisaje fractal no diferenciable. Evaluar si la inyección continua de RFF logra "suavizar" el terreno para GD.
+> - **HappyCat (F11) / HGBat (F12):** Valles estrechos curvos. Las heurísticas puras fracasan buscando la entrada.
+> - **Bent Cigar / Discus:** Condicionamiento extremo de $10^6$.
+> - **Pesadillas Modified Xin-She Yang's 3 (F29) y 5 (F30):** Clasificadas como "aguja en un pajar". Optimizadores estándar (PSO, GA, SQP) fallan incluso en 2D y 5D debido a mínimos globales masivamente aislados. Si *Seismic Descent* las resuelve, es resultado publicable de primer orden.
+> 
+> *A descartar:* Funciones Bowl-Shaped puras (Sphere, etc.) o demasiado sencillas, ya que el algoritmo las resuelve trivialmente a través del motor GD.
 
 ---
 

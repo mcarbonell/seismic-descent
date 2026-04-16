@@ -5,6 +5,8 @@ _timing.py
 _timing_fair.py
 _*.py
 
+*.pdf
+
 data/
 exdata/
 ppdata/

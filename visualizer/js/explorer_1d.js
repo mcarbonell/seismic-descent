@@ -45,6 +45,85 @@ const FUNCTIONS = {
         globalMinVal: 0,
         fn: (x) => 0.5 * x * x,
         grad: (x) => x
+    },
+    griewank: {
+        name: 'Griewank',
+        range: 100,
+        globalMin: 0,
+        globalMinVal: 0,
+        fn: (x) => (x * x) / 4000 - Math.cos(x) + 1,
+        grad: (x) => x / 2000 + Math.sin(x)
+    },
+    rosenbrock: {
+        name: 'Rosenbrock (Slice)',
+        range: 2,
+        globalMin: 1,
+        globalMinVal: 0,
+        fn: (x) => Math.pow(1 - x, 2) + 100 * Math.pow(1 - x * x, 2),
+        grad: (x) => 400 * Math.pow(x, 3) - 398 * x - 2
+    },
+    levy: {
+        name: 'Levy',
+        range: 10,
+        globalMin: 1,
+        globalMinVal: 0,
+        fn: (x) => {
+            const w = 1 + (x - 1) / 4;
+            return Math.pow(Math.sin(Math.PI * w), 2) + Math.pow(w - 1, 2) * (1 + Math.pow(Math.sin(2 * Math.PI * w), 2));
+        },
+        grad: (x) => {
+            const w = 1 + (x - 1) / 4;
+            const term1 = Math.PI * Math.sin(2 * Math.PI * w);
+            const term2 = 2 * (w - 1) * (1 + Math.pow(Math.sin(2 * Math.PI * w), 2));
+            const term3 = Math.pow(w - 1, 2) * 2 * Math.PI * Math.sin(4 * Math.PI * w);
+            return (term1 + term2 + term3) / 4;
+        }
+    },
+    michalewicz: {
+        name: 'Michalewicz',
+        range: Math.PI,
+        globalMin: 2.2, // Approx for 1D
+        globalMinVal: -1,
+        fn: (x) => -Math.sin(x) * Math.pow(Math.sin(x * x / Math.PI), 20),
+        grad: (x) => {
+            const s1 = Math.sin(x);
+            const c1 = Math.cos(x);
+            const s2 = Math.sin(x * x / Math.PI);
+            const c2 = Math.cos(x * x / Math.PI);
+            const p = Math.pow(s2, 19);
+            return -(c1 * s2 * p + s1 * 20 * p * c2 * (2 * x / Math.PI));
+        }
+    },
+    styblinski_tang: {
+        name: 'Styblinski-Tang',
+        range: 5,
+        globalMin: -2.903534,
+        globalMinVal: -39.16616 / 2, // 1D value
+        fn: (x) => 0.5 * (Math.pow(x, 4) - 16 * x * x + 5 * x),
+        grad: (x) => 0.5 * (4 * Math.pow(x, 3) - 32 * x + 5)
+    },
+    gramacy_lee: {
+        name: 'Gramacy & Lee',
+        range: 1.5, // Center around 1.5 with range 1.5 -> [0, 3] approx
+        offset: 1.5, 
+        globalMin: 0.5485,
+        globalMinVal: -0.869,
+        fn: (x) => {
+            // Adjust x to be in [0.5, 2.5] based on our [-1, 1] normalization
+            // In explorer_1d, realX = p.x * range. 
+            // If range is 1.5 and we add an offset of 1.5:
+            const val = x + 0.5; // Shift to start from 0.5
+            if (val <= 0) return 0;
+            return Math.sin(10 * Math.PI * val) / (2 * val) + Math.pow(val - 1, 4);
+        },
+        grad: (x) => {
+            const val = x + 0.5;
+            if (val <= 0) return 0;
+            const term1 = (10 * Math.PI * Math.cos(10 * Math.PI * val)) / (2 * val);
+            const term2 = Math.sin(10 * Math.PI * val) / (2 * val * val);
+            const term3 = 4 * Math.pow(val - 1, 3);
+            return term1 - term2 + term3;
+        }
     }
 };
 
@@ -92,9 +171,18 @@ class Explorer1D {
     initUI() {
         const bind = (id, key, event = 'input', cb = null) => {
             const el = document.getElementById(id);
+            if (!el) return;
             el.addEventListener(event, (e) => {
-                this.config[key] = (el.type === 'checkbox') ? el.checked : parseFloat(e.target.value) || e.target.value;
-                if (cb) cb(e.target.value);
+                let val;
+                if (el.type === 'checkbox') {
+                    val = el.checked;
+                } else if (el.type === 'number' || el.type === 'range') {
+                    val = parseFloat(el.value);
+                } else {
+                    val = el.value;
+                }
+                this.config[key] = val;
+                if (cb) cb(val);
             });
         };
 
