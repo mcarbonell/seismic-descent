@@ -32,5 +32,12 @@ Coronando la fase de experimentación cruzamos Seismic Descent contra CMA-ES con
 - **En $5D$:** Seismic alcanzó un $100\%$ de triunfo ciego `(30/30 cruces)`, doblegando y eclipsando por completo a la todopoderosa metaheurística de matriz de covarianza gracias a sus continuas recapacidades sísmicas anti-estancamiento (el infarto prematuro de CMA).
 - **En $>10D$:** La ley física de las dimensiones astronómicas expone sin embargo el talón de aquiles topográfico: CMA-ES triunfa sobradamente porque infiere la dimensionalidad cruzada matemáticamente, la cual es imposible de mapear puramente con embudos gravitacionales en 50 dimensiones hiper-densas.
 
+## Fase 5: Hacia la Universalidad y la Normalización (v18 - v22)
+
+- **v18 & v19 (Dominio Isotrópico Normalizado):** Descubrimiento crítico: los hiperparámetros eran esclavos del tamaño del dominio. Mapeamos internamente todo a `[-1, 1]^D`. Resolvió el problema del `lengthscale` del ruido, pero reveló que la escala en Y (valores altísimos de Rosenbrock vs bajos de Griewank) destruía la consistencia del tamaño de paso `dt`.
+- **v20 (La Arquitectura Campeona Actual - Gradient Normalization):** El hito más grande de universalidad. Desacoplamos la magnitud de la pendiente normalizando el vector gradiente ($L_2$). Esto requirió implementar un **dt cíclico desacoplado** (`dt_base * abs(sin(t * mult))`) para recuperar la capacidad de explotación fina. Por primera vez logramos **hiperparámetros verdaderamente universales** (`dt=0.2`, `amp=0.5`, `mult=5.0`) que funcionan en cualquier función matemática sin lógica condicional.
+- **v21 (Aceptación Discreta y Paisaje Subrogado):** Experimento donde la partícula solo se movía si mejoraba un valor subrogado (función + ruido). Fracasó porque volvió a las partículas rígidas, perdiendo la capacidad de "surfear" y escapar de mínimos locales, y aplastó las escalas de la función mediante registros históricos.
+- **v22 (Función Oscilante - Vanishing Objective):** Experimento donde el ruido era constante y la función original "desaparecía y aparecía". Fracasó porque cegaba cíclicamente a la partícula, dejándola vagar y perder el rumbo en el ruido crudo.
+
 ---
 > *Creado espontáneamente y documentado desde cero en una épica *hackathon* colaborativa de $\sim 24$ horas de Pura Pasión y Descubrimiento Cibernético.*
