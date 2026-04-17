@@ -1,146 +1,147 @@
 """
-seismic_descent_v19.py — Ergodic Noise Morphing (Discreto-Continuo)
+seismic_descent_v19.py — Seismic Swarm con Dominio Isotrópico Normalizado.
 
-Basado en v18 genérico. Reemplaza el ruido dependiente del tiempo estricto 
-(que causaba alta frecuencia destructiva en altos budgets) por una 
-interpolación de varianza constante entre dos paisajes estáticos aleatorios (A y B).
-
-Al realizar un *morphing* suave entre dos campos RFF coherentes, aseguramos
-la propiedad de **Ergodicidad**: el sistema fluye orgánicamente por todo 
-el espacio sin vibraciones espasmódicas.
+MEJORA CRÍTICA: El optimizador trabaja internamente en el rango [-1, 1]^D.
+Mapea automáticamente las coordenadas y gradientes desde/hacia el espacio real
+definido por 'bounds'. Esto permite un dt y una escala de ruido universales.
 """
 
 import numpy as np
 
 # ------------------------------------------------------------------ #
-# Ergodic RFF Field
+# Random Fourier Features — Dominio Normalizado [-1, 1]
 # ------------------------------------------------------------------ #
 
-class RFFField:
-    """Campo de Ruido Gaussiano (GRF) con drift temporal."""
-    def __init__(self, octaves=4, seed=1, search_range=5.12, R=64):
-        self.R = R
-        self.octaves = octaves
-        rng = np.random.default_rng(seed=seed)
+_R = 64
+_rng = np.random.default_rng(seed=1)
 
-        self.omegas = []
-        self.phis = []
-        self.drifts = []
+_N_OCTAVES = 1
+_Z = [] 
+_PHIS   = _rng.uniform(0, 2 * np.pi, size=(_N_OCTAVES, _R))
+_DRIFTS = _rng.uniform(0.1, 0.5,     size=(_N_OCTAVES, _R))
 
-        scale_factor = search_range / 5.12
-        for o in range(octaves):
-            lengthscale = scale_factor * 2.0 * (2.0 ** o)
-            omegas = rng.normal(0, 1.0, size=(R, 100)) / lengthscale
-            phis = rng.uniform(0, 2 * np.pi, size=(R, 1))
-            drifts = rng.uniform(0.1, 0.5, size=(R, 1))
-            self.omegas.append(omegas)
-            self.phis.append(phis)
-            self.drifts.append(drifts)
+_D_MAX = 100
+for o in range(_N_OCTAVES):
+    # Base aleatoria z ~ N(0, 1) para las frecuencias
+    z = _rng.normal(0, 1.0, size=(_R, _D_MAX))
+    _Z.append(z)
 
-    def grad(self, X, t, amplitude):
-        """Devuelve el gradiente del campo con drift temporal para X (N, D)."""
-        if X.ndim == 1:
-            X = X.reshape(1, -1)
-        N, D = X.shape
-        grad = np.zeros((N, D))
-        amp = amplitude
-        sqrt_2_R = np.sqrt(2.0 / self.R)
 
-        for o in range(self.octaves):
-            omegas = self.omegas[o][:, :D]
-            phis = self.phis[o]
-            drifts = self.drifts[o]
+def rff_noise_grad_vec(X_norm, t, amplitude=15.0, octaves=_N_OCTAVES):
+    """
+    Gradiente RFF en espacio normalizado [-1, 1].
+    Lengthscale fijo para este dominio.
+    """
+    if X_norm.ndim == 1:
+        X_norm = X_norm.reshape(1, -1)
+    N, D = X_norm.shape
+    grad = np.zeros((N, D))
+    amp = amplitude
+    sqrt_2_R = np.sqrt(2.0 / _R)
 
-            angles = omegas @ X.T + t * drifts + phis
-            sines = np.sin(angles)
+    # En [-5.12, 5.12] el range es 10.24 y el lengthscale era 2.0.
+    # En [-1.0, 1.0] el range es 2.0, por regla de 3: 2.0 * (2.0 / 10.24) approx 0.39
+    BASE_LENGTHSCALE = 0.4
 
-            grad_contrib = (omegas.T @ sines).T
-            grad -= amp * sqrt_2_R * grad_contrib
-            amp *= 0.5
+    for o in range(octaves):
+        lengthscale = BASE_LENGTHSCALE * (2.0 ** o)
+        omegas = _Z[o][:, :D] / lengthscale
+        phis   = _PHIS[o][:, None]
+        drifts = _DRIFTS[o][:, None]
+        
+        projections = omegas @ X_norm.T
+        angles = projections + t * drifts + phis
+        sines = np.sin(angles)
+        
+        grad_contrib = (omegas.T @ sines).T
+        grad -= amp * sqrt_2_R * grad_contrib
+        amp *= 0.5
 
-        return grad
+    return grad
+
 
 # ------------------------------------------------------------------ #
-# Seismic Swarm — Ergodic Morphing
+# Seismic Swarm — Normalizado
 # ------------------------------------------------------------------ #
 
 def seismic_swarm(
-    fn,                    
-    fn_grad,               
-    x0,                    
+    fn,                    # callable(X_real) -> array(N,)
+    fn_grad,               # callable(X_real) -> array(N, D)
+    x0_real,               # array(D,) punto inicial en espacio real
+    bounds,                # array(D, 2) con (min, max) por dimensión
     n_steps=2000,
     n_particles=10,
     dt=0.01,
     noise_amplitude=15.0,
-    noise_decay=1.0,        # Sin decay global — v1 findings
-    search_range=5.12,
-    morph_steps=100,       
-    octaves=4,
-    n_cycles=10            # Ciclos exactos — v14 findings
+    noise_decay=1.0,
+    n_cycles=10,
 ):
     """
-    Seismic Swarm v19: Ergodic Morphing.
-    La partícula navega un paisaje que muta suavemente, permitiendo una 
-    exploración fluida del dominio guiada por la topología RFF.
-    
-    Decisiones validadas:
-    - noise_decay=1.0 (sin decay global) — findings_v1.md
-    - Sin abs() en el seno — findings_v8_no_abs.md  
-    - n_cycles exactos — findings_v14_cycles.md
+    Seismic Swarm con normalización interna a [-1, 1].
     """
-    D = len(x0)
+    bounds = np.array(bounds)
+    D = len(x0_real)
     
-    X = np.random.uniform(-search_range, search_range, size=(n_particles, D))
-    X[0] = np.array(x0, dtype=float)
+    # Parámetros de transformación
+    # X_real = center + X_norm * half_range
+    # Grad_norm = Grad_real * half_range
+    center = (bounds[:, 1] + bounds[:, 0]) / 2.0
+    half_range = (bounds[:, 1] - bounds[:, 0]) / 2.0
     
-    real_vals = fn(X)
-    best_idx = np.argmin(real_vals)
-    best_val = real_vals[best_idx]
-    best_x = X[best_idx].copy()
+    # Inicialización en espacio normalizado
+    # Mapeamos x0_real a normalized
+    x0_norm = (np.array(x0_real) - center) / half_range
     
-    best_per_step = [float(best_val)]
-    
-    seed_A = 1
-    seed_B = 2
-    field_A = RFFField(octaves, seed_A, search_range)
-    field_B = RFFField(octaves, seed_B, search_range)
+    X_norm = np.random.uniform(-1.0, 1.0, size=(n_particles, D))
+    X_norm[0] = np.clip(x0_norm, -1.0, 1.0)
     
     t = 0.0
     dt_noise = (n_cycles * np.pi) / n_steps
-    step = 0
+
+    # Evaluación inicial
+    X_real = center + X_norm * half_range
+    real_vals = fn(X_real)
+    best_idx = np.argmin(real_vals)
+    best_val = real_vals[best_idx]
+    best_x_real = X_real[best_idx].copy()
     
-    for i in range(n_steps):
-        u = (step % morph_steps) / morph_steps
-        weight_A = np.cos(u * np.pi / 2)
-        weight_B = np.sin(u * np.pi / 2)
+    best_per_step = [float(best_val)]
+
+    for step in range(n_steps):
+        decay = noise_decay ** step
+        freq  = 2.0 * decay
+        amp   = noise_amplitude * decay * np.sin(t * freq)
+
+        # 1. Mapear a espacio real para evaluar gradiente
+        X_real = center + X_norm * half_range
         
-        decay = noise_decay ** i
-        freq = 2.0 * decay
-        amp = noise_amplitude * decay * np.sin(t * freq)
+        # 2. Obtener gradiente real
+        f_grad_real = fn_grad(X_real)
         
-        grad_A = field_A.grad(X, t, amp)
-        grad_B = field_B.grad(X, t, amp)
+        # 3. Mapear gradiente real a normalizado (Regla de la cadena)
+        # dF/dX_norm = dF/dX_real * dX_real/dX_norm = f_grad_real * half_range
+        f_grad_norm = f_grad_real * half_range
         
-        noise_grad = weight_A * grad_A + weight_B * grad_B
-        f_grad = fn_grad(X)
+        # 4. Obtener gradiente de ruido (ya en espacio normalizado)
+        noise_grad = rff_noise_grad_vec(X_norm, t, amp)
         
-        X -= dt * (f_grad + noise_grad)
-        np.clip(X, -search_range, search_range, out=X)
+        # 5. Update en espacio normalizado
+        grad = f_grad_norm + noise_grad
+        X_norm -= dt * grad
         
-        real_vals = fn(X)
+        # Clip en espacio normalizado
+        np.clip(X_norm, -1.0, 1.0, out=X_norm)
+        
+        t += dt_noise
+
+        # Evaluación y tracking
+        X_real = center + X_norm * half_range
+        real_vals = fn(X_real)
         step_best_idx = np.argmin(real_vals)
         if real_vals[step_best_idx] < best_val:
             best_val = real_vals[step_best_idx]
-            best_x = X[step_best_idx].copy()
-            
-        best_per_step.append(float(best_val))
+            best_x_real = X_real[step_best_idx].copy()
         
-        t += dt_noise
-        step += 1
-        if step % morph_steps == 0:
-            seed_A = seed_B
-            seed_B += 1
-            field_A = field_B
-            field_B = RFFField(octaves, seed_B, search_range)
-            
-    return best_x, best_val, {'best_per_step': best_per_step}
+        best_per_step.append(float(best_val))
+
+    return best_x_real, best_val, {'best_per_step': best_per_step}

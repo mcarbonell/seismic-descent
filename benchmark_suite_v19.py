@@ -1,7 +1,7 @@
 """
-benchmark_suite_v19.py — Suite de benchmark multi-función para Seismic Descent v19 (Ergodic).
+benchmark_suite_v19.py — Suite de benchmark multi-función para Seismic Descent v19.
 
-Evalúa Seismic Swarm v19 (Ergodic Morphing) contra SA y CMA-ES.
+Evalúa Seismic Swarm (v19) con Normalización de Dominio.
 """
 
 import argparse
@@ -15,12 +15,14 @@ from seismic_descent_v19 import seismic_swarm
 from benchmark_functions import ALL_FUNCTIONS
 
 
-def cmaes_run(fn, x0, eval_budget, search_range):
+def cmaes_run(fn, x0, eval_budget, bounds):
+    """Wrapper genérico de CMA-ES."""
     opts = cma.CMAOptions()
-    opts['bounds'] = [[-search_range] * len(x0), [search_range] * len(x0)]
+    opts['bounds'] = [bounds[:, 0].tolist(), bounds[:, 1].tolist()]
     opts['maxfevals'] = eval_budget
     opts['verbose'] = -9
-    sigma0 = search_range * 0.8
+    # sigma0 proporcional al rango medio
+    sigma0 = np.mean(bounds[:, 1] - bounds[:, 0]) * 0.2
     es = cma.CMAEvolutionStrategy(list(x0), sigma0, opts)
     while not es.stop():
         solutions = es.ask()
@@ -29,7 +31,8 @@ def cmaes_run(fn, x0, eval_budget, search_range):
 
 
 def sa_generic(fn, x0, n_steps=5000, T0=10.0, cooling=0.999,
-               step_size=0.3, search_range=5.12):
+               step_size=0.3, bounds=None):
+    """Simulated Annealing genérico."""
     x = np.array(x0, dtype=float)
     current_val = float(fn(x))
     best_x = x.copy()
@@ -37,10 +40,8 @@ def sa_generic(fn, x0, n_steps=5000, T0=10.0, cooling=0.999,
     T = T0
 
     for _ in range(n_steps):
-        x_new = np.clip(
-            x + np.random.normal(0, step_size, size=len(x)),
-            -search_range, search_range
-        )
+        noise = np.random.normal(0, step_size, size=len(x))
+        x_new = np.clip(x + noise, bounds[:, 0], bounds[:, 1])
         new_val = float(fn(x_new))
         delta = new_val - current_val
         if delta < 0 or np.random.random() < np.exp(-delta / max(T, 1e-10)):
@@ -54,19 +55,31 @@ def sa_generic(fn, x0, n_steps=5000, T0=10.0, cooling=0.999,
 
 
 def run_single_benchmark(func_config, dims, n_trials, eval_budget_base):
+    """Ejecuta benchmark para 1 función x 1 dimensión."""
     fn = func_config['fn']
     fn_grad = func_config['grad']
     search_range = func_config['search_range']
-    fname = func_config['name']
+    fname = func_config['name'].lower()
     
-    if fname == 'Schwefel':
-        noise_amp = 1500.0
-    elif fname == 'Griewank':
-        noise_amp = 5.0
-    elif fname == 'Rosenbrock':
-        noise_amp = 10.0
-    else:
-        noise_amp = 15.0
+    # Definir bounds (D, 2)
+    bounds = np.zeros((dims, 2))
+    bounds[:, 0] = -search_range
+    bounds[:, 1] = search_range
+
+    # --- HIPERPARÁMETROS v19 (Normalizados) ---
+    # Gracias a la normalización, muchos valores se unifican.
+    noise_amp = 1.0 # Reducimos amplitud para que no ahogue el gradiente en [-1, 1]
+    dt_base = 0.0005 # Reducimos dt para evitar rebotes violentos
+    
+    if fname == 'rosenbrock':
+        dt_base = 0.00001
+    elif fname == 'schwefel':
+        noise_amp = 50.0 # Schwefel necesita más "sacudida"
+        dt_base = 0.0001
+    elif fname == 'ackley':
+        dt_base = 0.005
+    elif fname == 'griewank':
+        dt_base = 0.001
 
     eval_budget = eval_budget_base * (dims + 1)
     n_particles = max(dims, 5)
@@ -74,11 +87,11 @@ def run_single_benchmark(func_config, dims, n_trials, eval_budget_base):
     sa_steps = eval_budget
     
     threshold = dims * 1.0
-    if fname == 'Schwefel':
+    if fname == 'schwefel':
         threshold = dims * 50.0
 
-    results = {'seismic_v19': [], 'sa': [], 'cmaes': []}
-    times = {'seismic_v19': 0.0, 'sa': 0.0, 'cmaes': 0.0}
+    results = {'seismic': [], 'sa': [], 'cmaes': []}
+    times = {'seismic': 0.0, 'sa': 0.0, 'cmaes': 0.0}
 
     np.random.seed(42)
 
@@ -87,32 +100,32 @@ def run_single_benchmark(func_config, dims, n_trials, eval_budget_base):
     for trial in range(n_trials):
         x0 = np.random.uniform(-search_range, search_range, size=dims)
 
-        # --- Seismic v19 ---
+        # --- Seismic ---
         t0 = time.time()
         _, sval, _ = seismic_swarm(
             fn, fn_grad, x0,
+            bounds=bounds,
             n_steps=seismic_steps,
             n_particles=n_particles,
-            search_range=search_range,
             noise_amplitude=noise_amp,
-            morph_steps=seismic_steps // 10,
-            n_cycles=10,
+            dt=dt_base
         )
-        times['seismic_v19'] += time.time() - t0
-        results['seismic_v19'].append(float(sval))
+        times['seismic'] += time.time() - t0
+        results['seismic'].append(float(sval))
 
         # --- SA ---
         t0 = time.time()
         sa_step_size = search_range * 0.05
-        _, sa_val = sa_generic(fn, x0, n_steps=sa_steps, search_range=search_range, step_size=sa_step_size)
+        _, sa_val = sa_generic(fn, x0, n_steps=sa_steps, bounds=bounds, step_size=sa_step_size)
         times['sa'] += time.time() - t0
         results['sa'].append(float(sa_val))
 
         # --- CMA-ES ---
         t0 = time.time()
         try:
-            _, cma_val = cmaes_run(fn, x0, eval_budget, search_range)
+            _, cma_val = cmaes_run(fn, x0, eval_budget, bounds)
         except Exception as e:
+            print(f"CMA-ES failed on trial {trial}: {e}")
             cma_val = float('inf')
         times['cmaes'] += time.time() - t0
         results['cmaes'].append(float(cma_val))
@@ -136,30 +149,54 @@ def run_single_benchmark(func_config, dims, n_trials, eval_budget_base):
         'threshold': threshold,
     }
     
-    print(f"  Seismic v19: {res_dict['results']['seismic_v19']['successes']}/{n_trials} success, median={res_dict['results']['seismic_v19']['median']:.2f}, time={times['seismic_v19']:.2f}s")
-    print(f"  SA:          {res_dict['results']['sa']['successes']}/{n_trials} success, median={res_dict['results']['sa']['median']:.2f}, time={times['sa']:.2f}s")
-    print(f"  CMA-ES:      {res_dict['results']['cmaes']['successes']}/{n_trials} success, median={res_dict['results']['cmaes']['median']:.2f}, time={times['cmaes']:.2f}s")
+    print(f"  Seismic: {res_dict['results']['seismic']['successes']}/{n_trials} success, median={res_dict['results']['seismic']['median']:.2f}, time={times['seismic']:.2f}s")
+    print(f"  SA:      {res_dict['results']['sa']['successes']}/{n_trials} success, median={res_dict['results']['sa']['median']:.2f}, time={times['sa']:.2f}s")
+    print(f"  CMA-ES:  {res_dict['results']['cmaes']['successes']}/{n_trials} success, median={res_dict['results']['cmaes']['median']:.2f}, time={times['cmaes']:.2f}s")
 
     return res_dict
+
+def generate_markdown(all_results, output_file):
+    md = "# Benchmark Suite v19 Results (Normalized)\n\n"
+    for res in all_results:
+        md += f"## {res['function'].capitalize()} {res['dims']}D — {res['n_trials']} trials | budget={res['eval_budget']} evals (threshold: {res['threshold']})\n\n"
+        md += "| Algoritmo | Éxitos | Media | Mediana | Std | Tiempo |\n"
+        md += "|---|---|---|---|---|---|\n"
+        
+        for algo in ['seismic', 'sa', 'cmaes']:
+            data = res['results'][algo]
+            name = "Seismic Swarm v19" if algo == 'seismic' else ("SA" if algo == 'sa' else "CMA-ES")
+            md += f"| {name} | {data['successes']}/{res['n_trials']} | {data['mean']:.2f} | {data['median']:.2f} | {data['std']:.2f} | {data['time_s']:.1f}s |\n"
+        md += "\n"
+        
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(md)
+    print(f"Markdown written to {output_file}")
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--functions', nargs='+', default=list(ALL_FUNCTIONS.keys()))
-    parser.add_argument('--dims', nargs='+', type=int, default=[5, 10, 20])
+    parser.add_argument('--dims', nargs='+', type=int, default=[5, 10])
     parser.add_argument('--preset', choices=['low', 'medium', 'high'], default='low')
     args = parser.parse_args()
 
     presets = {
-        'low': {'trials': 10, 'budget_base': 500},
-        'medium': {'trials': 30, 'budget_base': 1000},
+        'low': {'trials': 5, 'budget_base': 500},
+        'medium': {'trials': 20, 'budget_base': 1000},
         'high': {'trials': 30, 'budget_base': 5000},
     }
-    config = presets[args.preset]
-    all_results = []
     
+    config = presets[args.preset]
+    
+    all_results = []
     os.makedirs('results', exist_ok=True)
     
     for fname in args.functions:
+        fname = fname.lower()
+        if fname not in ALL_FUNCTIONS:
+            continue
+            
         fconfig = ALL_FUNCTIONS[fname]
         for d in args.dims:
             res = run_single_benchmark(fconfig, d, config['trials'], config['budget_base'])
@@ -167,3 +204,5 @@ if __name__ == '__main__':
             
     with open('results/benchmark_suite_v19.json', 'w', encoding='utf-8') as f:
         f.write(json.dumps(all_results, indent=2))
+        
+    generate_markdown(all_results, 'results/benchmark_suite_v19.md')
