@@ -6,7 +6,7 @@ except ImportError:
     print("Por favor instala cocoex: pip install cocoex cocopp")
     exit(1)
 
-from seismic_descent_v19 import seismic_swarm
+from seismic_descent_vmorph import seismic_swarm
 
 def fn_wrapper_factory(problem):
     """Convierte el evaluador 1D de COCO a un evaluador ND (N_particles, D)"""

@@ -52,7 +52,7 @@ def schwefel_grad(X):
     sin_term = np.sin(sqrt_abs)
     cos_term = np.cos(sqrt_abs)
     
-    grad = -sin_term - (X / (2.0 * sqrt_abs + 1e-30)) * cos_term
+    grad = -sin_term - (sqrt_abs / 2.0) * cos_term
     
     if is_1d:
         return grad[0]
@@ -140,10 +140,13 @@ def griewank_grad(X):
     sqrt_idx = np.sqrt(indices)
     
     cos_terms = np.cos(X / sqrt_idx)
-    full_prod = np.prod(cos_terms, axis=1, keepdims=True)
     
-    safe_cos = np.where(np.abs(cos_terms) < 1e-15, 1e-15 * np.sign(cos_terms + 1e-20), cos_terms)
-    prod_without_i = full_prod / safe_cos
+    left = np.cumprod(cos_terms, axis=1)
+    right = np.cumprod(cos_terms[:, ::-1], axis=1)[:, ::-1]
+    
+    prod_without_i = np.ones_like(cos_terms)
+    prod_without_i[:, 1:] *= left[:, :-1]
+    prod_without_i[:, :-1] *= right[:, 1:]
     
     sin_terms = np.sin(X / sqrt_idx)
     

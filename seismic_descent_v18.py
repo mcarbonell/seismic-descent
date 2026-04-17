@@ -17,7 +17,7 @@ import numpy as np
 _R = 64
 _rng = np.random.default_rng(seed=1)
 
-_N_OCTAVES = 4
+_N_OCTAVES = 1
 _Z = []  # Normal estándar generada 1 vez, escalada dinámicamente según el dominio
 _PHIS   = _rng.uniform(0, 2 * np.pi, size=(_N_OCTAVES, _R))
 _DRIFTS = _rng.uniform(0.1, 0.5,     size=(_N_OCTAVES, _R))
@@ -29,7 +29,7 @@ for o in range(_N_OCTAVES):
     _Z.append(z)
 
 
-def rff_noise_grad_vec(X, t, amplitude=15.0, octaves=4, search_range=5.12):
+def rff_noise_grad_vec(X, t, amplitude=15.0, octaves=_N_OCTAVES, search_range=5.12):
     """
     Gradiente RFF vectorizado para N partículas. Shape X: (N, D).
     El scale_factor ajusta la frecuencia del ruido al tamaño del dominio
