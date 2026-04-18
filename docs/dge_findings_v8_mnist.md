@@ -109,6 +109,28 @@ Es equivalente al `same_sample` trick de MeZO.
 
 ---
 
+## Resultados v8c — Empujando hacia el 90%
+
+Setup: 1,000,000 evals · 5k/1k train/test · lr_decay=0.001 (más lento)
+
+| Evals | DGE train | DGE test | SPSA train | SPSA test |
+|-------|-----------|----------|------------|-----------|
+| 100k | 91.1% | 88.7% | 55.8% | 56.9% |
+| 400k | 96.4% | **89.7%** | 54.5% | 55.7% |
+| 700k | 97.9% | **90.4%** ✅ | 54.5% | 55.7% |
+| 1000k | 99.3% | 88.6% | 54.5% | 55.7% |
+
+**DGE best test: 90.4% · SPSA best test: 56.9% · Ventaja: +33.5pp**
+
+SPSA se estanca a ~56% con 1M evaluaciones. No puede escapar del ruido
+de perturbar D=25,450 dimensiones en cada paso. DGE con el fix del
+mismo-batch escala correctamente.
+
+El overfitting suave de DGE (99.3% train vs 90.4% test) es esperado
+con solo 5k muestras de entrenamiento.
+
+---
+
 ## Próximas iteraciones (v8c, v8d…)
 
 ### v8c — ¿Puede superar el 90%? (+más budget)
