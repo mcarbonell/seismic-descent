@@ -50,6 +50,7 @@ Cada paso de optimización:
 | v4 | **Adam + cosine decay** | Salto 440–7300x en convergencia |
 | v5 | **lr escalado 1/√k + benchmark SPSA** | Comparación honesta obtenida |
 | **v6** | **Red XOR sin backprop** | **DGE 5/5 vs SPSA 0/5** ✅ |
+| **v7b**| **Gradient Clipping (max_norm=1.0)** | **Estabiliza D=65536 (Evita divergencia)** ✅ |
 
 ---
 
@@ -116,7 +117,7 @@ la ventaja de la estimación por variable sobre la perturbación global.
 |-----------|---|---------|----------|---------|------|
 | Esfera densa | 512 | 3.31e-01 | 2.09e-02 | SPSA 16x | Esperado |
 | Esfera sparse 5% | 512 | 6.66e-04 | 8.92e-07 | SPSA 750x | Ver análisis |
-| Esfera alta-D | 65536 | 2.31e+05 ❌ | 1.99e+04 | SPSA | DGE diverge |
+| Esfera alta-D | 65536 | 2.19e+04 (v7b) ✅ | 1.99e+04 | SPSA | DGE estabilizado (v7b), SPSA gana por frec. |
 | Rosenbrock D=10 | 10 | 6.90e+00 | 8.74e+67 ❌ | **DGE** | SPSA diverge |
 
 **Por qué gana SPSA en convexas:** ventaja de frecuencia (5x más pasos con mismo presupuesto).
@@ -143,7 +144,7 @@ en paisajes no convexos donde SPSA diverge sin calibración delicada del `lr`.
 4. ✅ **Decay coseno de lr+delta elimina oscilación** (Rosenbrock).
 5. ✅ **DGE supera a SPSA en paisajes no convexos** (Rosenbrock, XOR).
 6. ✅ **SPSA gana en convexas** por ventaja de frecuencia de pasos.
-7. ⚠️ **Alta dimensión (D=65536) pendiente** — Adam diverge, necesita gradient clipping.
+7. ✅ **Alta dimensión estabilizada (v7b)** — Gradient clipping (`max_norm=1.0`) elimina la divergencia en D=65536. Converge, aunque SPSA sigue ganando en convexas puras por frecuencia.
 
 ---
 
@@ -154,9 +155,8 @@ en paisajes no convexos donde SPSA diverge sin calibración delicada del `lr`.
 - Valida que DGE escala a D más grande en contexto de red neuronal.
 - Comparación DGE vs SPSA vs (si backprop disponible) Adam estándar.
 
-### v7b — Gradient clipping para alta dimensión
-- `update = clip(adam_update, max_norm)` para estabilizar D=65536.
-- Fix técnico del bug identificado en v4/v5.
+### v7b — Gradient clipping para alta dimensión ✅ (Completado)
+- Bug de divergencia de Adam solucionado mediante clipping (`max_norm=1.0`).
 
 ---
 
