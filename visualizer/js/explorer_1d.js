@@ -418,15 +418,21 @@ class Explorer1D {
         const toX = (u) => ((u + 1) / 2) * w;
         const toY = (y) => h - ((y - viewYMin) / (viewYMax - viewYMin)) * h;
 
-        // Draw Heatmap
+        // Draw Heatmap (Luminous high-contrast sky blue / cyan with highlight)
         if (this.config.showHeatmap) {
             const barW = w / this.heatmapRes;
             const maxVal = Math.max(...this.heatmap, 0.1);
-            ctx.fillStyle = 'rgba(0, 255, 136, 0.1)';
             for (let i = 0; i < this.heatmapRes; i++) {
                 if (this.heatmap[i] > 0) {
-                    const barH = (Math.min(this.heatmap[i], maxVal) / maxVal) * h;
+                    const normVal = Math.min(this.heatmap[i], maxVal) / maxVal;
+                    const barH = normVal * h;
+                    // Luminous sky blue with visit-frequency gradient
+                    const alpha = 0.25 + 0.50 * normVal;
+                    ctx.fillStyle = `rgba(56, 189, 248, ${alpha})`;
                     ctx.fillRect(i * barW, h - barH, barW, barH);
+                    // Vivid luminous crest line on top of each bin
+                    ctx.fillStyle = `rgba(224, 242, 254, ${0.5 + 0.5 * normVal})`;
+                    ctx.fillRect(i * barW, h - barH, barW, 2);
                 }
             }
         }
