@@ -2,7 +2,7 @@
 
 An optimization algorithm based on gradient descent over a dynamic landscape perturbed by spatially correlated noise. 
 
-![Seismic Descent](seismic-descent.png)
+![Seismic Descent](assets/seismic-descent.png)
 
 *Read this documentation in [Spanish](README.es.md)*
 
@@ -51,7 +51,7 @@ This continuous mutation mathematically guarantees that a particle, guided purel
 
 ### Empirical Thermodynamic Properties (Laplacian Ergodicity)
 
-![Laplacian Ergodic Histogram](laplacian_ergodicity.png)
+![Laplacian Ergodic Histogram](assets/laplacian_ergodicity.png)
 *Notice how the green ergodicity histogram perfectly draws a sharp Laplacian distribution ($e^{-|x|}$) around each local minimum. The peak height directly correlates with the minimum's depth, while the width correlates with the steepness of the basin walls.*
 
 Observations from the 1D visualizer reveal a profound statistical mechanics property: as `t -> ∞`, the particle's spatial probability density function (the ergodic heatmap) converges into sharp **Laplacian** peaks centered at local minima.
@@ -66,47 +66,87 @@ To truly understand how Seismic Descent works, you can explore the algorithm int
 - **[1D Seismic Explorer](https://mcarbonell.github.io/seismic-descent/visualizer/1d_explorer.html)**: Visualize how the original function, the seismic noise phase, and the morphed landscape interact. Watch the particles escape local minima and see the "Ergodic Heatmap" prove the organic search space coverage.
 - **[2D Interactive Map](https://mcarbonell.github.io/seismic-descent/visualizer/index.html)**: Observe the 2D spatial correlation of the Perlin-generated earthquakes visually dragging particles towards the global minimum.
 
-![1D Visualizer Ergodicity](seismic-1d.png)
+![1D Visualizer Ergodicity](assets/seismic-1d.png)
 *Snapshot of the 1D Visualizer optimizing the highly non-linear Rastrigin function. The green histogram at the bottom (Ergodic Heatmap) perfectly maps the continuous topological exploration of the particle across all local minima basins, tangibly proving the algorithm avoids infinite entrapment.*
 
 ## Installation
 
+Install from the repository using pip:
+
 ```bash
-pip install numpy noise matplotlib cma
+# Core package
+pip install -e .
+
+# With optional PyTorch and benchmark suites
+pip install -e ".[dev]"
 ```
 
-## Usage
+Or install external dependencies directly:
+```bash
+pip install numpy matplotlib torch cma noise pytest
+```
+
+## Quickstart
+
+### Python API
+
+```python
+from seismic_descent import seismic_swarm, ALL_FUNCTIONS
+
+# Load Rastrigin 5D benchmark
+rastrigin = ALL_FUNCTIONS["rastrigin"]
+bounds = [[-5.12, 5.12]] * 5
+x0 = [3.0] * 5
+
+# Optimize using the champion v20 architecture
+best_x, best_val, info = seismic_swarm(
+    fn=rastrigin["fn"],
+    fn_grad=rastrigin["grad"],
+    x0_real=x0,
+    bounds=bounds,
+    n_steps=2000,
+    n_particles=10,
+    dt_base=0.2,
+    noise_amplitude=0.5,
+)
+
+print(f"Optimal value found: {best_val:.6f}")
+```
+
+### CLI Benchmark Suite
+
+Run the automated benchmark suite comparing Seismic Descent against Simulated Annealing (SA) and CMA-ES:
 
 ```bash
-# Original 2D Benchmark (Perlin mapping)
-python perlin_opt.py
+# Run 5D benchmark across all functions
+python -m benchmarks.benchmark_suite --dims 5 --trials 5
 
-# N-Dimensional benchmark with RFF (Base ND variant)
-python perlin_opt_nd_grf.py
+# Run 2D benchmark on Rastrigin with custom budget
+python -m benchmarks.benchmark_suite --dims 2 --trials 3 --budget 2000 --function rastrigin
+```
 
-# CLI Benchmark testing (Seismic Swarm vs SA vs CMA-ES)
-python benchmark_budgets.py --preset low
-python benchmark_budgets.py --preset med
-python benchmark_budgets.py --preset high
+Run automated tests:
+```bash
+pytest -v
 ```
 
 ## PyTorch Integration
 
-The Seismic Descent algorithm is now available as a standard PyTorch optimizer. This allows for training neural networks with spatially correlated "earthquake" tremors to escape local minima.
+The Seismic Descent algorithm is available as a standard PyTorch optimizer. This allows training neural networks with spatially correlated "earthquake" perturbations to escape local minima:
 
 ```python
-from seismic_optimizer import SeismicOptimizer
+from seismic_descent import SeismicOptimizer
 
 model = MyModel()
 optimizer = SeismicOptimizer(
     model.parameters(), 
     lr=0.01, 
     noise_amplitude=0.5, 
-    n_cycles=10
+    n_cycles=10,
 )
 ```
 
-See [benchmark_mnist.py](benchmark_mnist.py) for a complete example and [docs/pytorch_optimizer.md](docs/pytorch_optimizer.md) for technical details.
+See [legacy/seismic_versions/benchmark_mnist.py](legacy/seismic_versions/benchmark_mnist.py) for a complete neural network training benchmark and [docs/pytorch_optimizer.md](docs/pytorch_optimizer.md) for technical derivations.
 
 ### Latest Benchmark (MNIST - 20 Epochs)
 
@@ -116,26 +156,38 @@ See [benchmark_mnist.py](benchmark_mnist.py) for a complete example and [docs/py
 | **Adaptive Floored Seismic** | **97.90%** | ✅ Beats Adam |
 | **Adam** | 97.79% | - |
 
-## Structure
+## Project Structure
 
 ```
-docs/
-  findings_v1.md           — 2D findings and amplitude A(t) schedule genesis
-  findings_v4_rff.md       — Random Fourier Features, Rastrigin ND results
-  findings_v7_rastrigin_analytic.md  — O(1) Analytic Gradients benchmarks
-  findings_v8_no_abs.md              — Gold discovery of negative amplitude polarity 
-  findings_v11_adam.md               — Explaining why Adam Optimizer chokes earthquakes
-  findings_v12_swarm.md              — Seismic Swarm: Parallel Analytic RFF Matrix
-  findings_v14_cycles.md             — Strict cyclic parametrization
-  findings_v15_reactive.md           — Bang-Bang Control (Stagnation triggers) Diagnosis
-  findings_v16_momentum.md           — Heavy-Ball Momentum (Sloshing & Filter failures)
-  findings_v17_temporal_octaves.md   — Temporal Fractal Earthquakes (Fourier super-positioning)
-  findings_budgets_scale.md          — Massive Budget scale up against Simulated Annealing & CMA-ES
-  summary_of_experiments.md          — Total deep-dive history of the initial 24h repository life
-perlin_opt.py              — Base 2D prototype
-perlin_opt_nd_grf.py       — N-Dimensional RFF integration
-perlin_opt_nd_grf_analytic*.py — Incremental historic repository variants (v7 to v17)
-benchmark_budgets.py       — Highly-parametrized CLI algorithm vs algorithm testing suite
+seismic-descent/
+├── src/seismic_descent/            # Core installable Python package
+│   ├── core.py                     # SeismicSwarm (v20 champion architecture)
+│   ├── rff.py                      # Random Fourier Features (analytic gradients)
+│   ├── torch_optimizer.py          # PyTorch SeismicOptimizer module
+│   └── functions.py                # Rastrigin, Schwefel, Ackley, Griewank, Rosenbrock
+│
+├── benchmarks/                     # Benchmark runners and comparative suites
+│   ├── benchmark_suite.py          # Automated CLI benchmark runner (vs SA & CMA-ES)
+│   └── timing/                     # Profiling and execution time tests
+│
+├── legacy/                         # Preserved chronological experimental versions
+│   ├── perlin_opt/                 # v1 to v17 (Perlin, value noise, early RFF swarms)
+│   ├── seismic_versions/           # v18 to v22, vmorph, and MNIST experiments
+│   └── README.md                   # Detailed experimental history guide
+│
+├── tests/                          # Automated unit tests (pytest)
+│   ├── test_rff.py                 # RFF properties and analytic gradient checks
+│   ├── test_seismic_swarm.py       # Optimization convergence tests
+│   └── test_torch_optimizer.py     # PyTorch optimizer validation
+│
+├── visualizer/                     # Interactive HTML5/Canvas visualizers (GitHub Pages)
+│   ├── 1d_explorer.html            # 1D ergodic landscape deformation & heatmap
+│   ├── 2d_explorer.html            # 2D wireframe mesh & swarm trajectories
+│   └── index.html                  # 2D interactive canvas map
+│
+├── assets/                         # Visual assets and README graphics
+├── docs/                           # Research findings (findings_v1 to v23), theory notes
+└── scratch/                        # Developer experimental scratchpad
 ```
 
 ## Future Scope

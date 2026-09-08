@@ -3,7 +3,7 @@
 Algoritmo de optimización basado en descenso de gradiente sobre un paisaje
 dinámico perturbado con ruido correlacionado espacialmente.
 
-![Seismic Descent](seismic-descent.png)
+![Seismic Descent](assets/seismic-descent.png)
 
 ## La idea
 
@@ -83,41 +83,82 @@ Esta mutación continua garantiza matemáticamente que una partícula, guiada pu
 
 ## Instalación
 
+Instala el paquete en modo editable desde la raíz del repositorio:
+
 ```bash
-pip install numpy noise matplotlib cma
+# Paquete núcleo
+pip install -e .
+
+# Con dependencias completas para desarrollo y benchmarks
+pip install -e ".[dev]"
 ```
 
-## Uso
+O instala las dependencias externas directamente:
+```bash
+pip install numpy matplotlib torch cma noise pytest
+```
+
+## Inicio Rápido
+
+### Uso desde Python
+
+```python
+from seismic_descent import seismic_swarm, ALL_FUNCTIONS
+
+# Cargar función objetivo Rastrigin 5D
+rastrigin = ALL_FUNCTIONS["rastrigin"]
+bounds = [[-5.12, 5.12]] * 5
+x0 = [3.0] * 5
+
+# Optimizar mediante la arquitectura campeona v20
+best_x, best_val, info = seismic_swarm(
+    fn=rastrigin["fn"],
+    fn_grad=rastrigin["grad"],
+    x0_real=x0,
+    bounds=bounds,
+    n_steps=2000,
+    n_particles=10,
+    dt_base=0.2,
+    noise_amplitude=0.5,
+)
+
+print(f"Valor óptimo encontrado: {best_val:.6f}")
+```
+
+### Suite de Benchmarks (CLI)
+
+Ejecuta la suite automatizada de benchmarks contra Simulated Annealing (SA) y CMA-ES:
 
 ```bash
-# Benchmark 2D original
-python perlin_opt.py
+# Benchmark en 5D para todas las funciones
+python -m benchmarks.benchmark_suite --dims 5 --trials 5
 
-# Benchmark N-dimensional con RFF (mejor versión)
-python perlin_opt_nd_grf.py
+# Benchmark en 2D para Rastrigin con presupuesto personalizado
+python -m benchmarks.benchmark_suite --dims 2 --trials 3 --budget 2000 --function rastrigin
+```
 
-# Benchmarks en otras funciones
-python benchmark_ackley.py
-python benchmark_schwefel.py
+Ejecutar tests automatizados:
+```bash
+pytest -v
 ```
 
 ## Integración con PyTorch
 
-El algoritmo Seismic Descent ahora está disponible como un optimizador estándar de PyTorch. Esto permite entrenar redes neuronales con "temblores" correlacionados espacialmente para escapar de mínimos locales.
+El algoritmo Seismic Descent está disponible como un optimizador estándar de PyTorch. Esto permite entrenar redes neuronales con "temblores" correlacionados espacialmente para escapar de mínimos locales:
 
 ```python
-from seismic_optimizer import SeismicOptimizer
+from seismic_descent import SeismicOptimizer
 
 model = MyModel()
 optimizer = SeismicOptimizer(
     model.parameters(), 
     lr=0.01, 
     noise_amplitude=0.5, 
-    n_cycles=10
+    n_cycles=10,
 )
 ```
 
-Consulta [benchmark_mnist.py](benchmark_mnist.py) para un ejemplo completo y [docs/pytorch_optimizer.es.md](docs/pytorch_optimizer.es.md) para detalles técnicos.
+Consulta [legacy/seismic_versions/benchmark_mnist.py](legacy/seismic_versions/benchmark_mnist.py) para un ejemplo completo de entrenamiento en red neuronal y [docs/pytorch_optimizer.es.md](docs/pytorch_optimizer.es.md) para detalles técnicos.
 
 ### Último Benchmark (MNIST - 20 Épocas)
 
@@ -127,39 +168,38 @@ Consulta [benchmark_mnist.py](benchmark_mnist.py) para un ejemplo completo y [do
 | **Adaptive Floored Seismic** | **97.90%** | ✅ Supera a Adam |
 | **Adam** | 97.79% | - |
 
-## Estructura
+## Estructura del Proyecto
 
 ```
-docs/
-  findings_v1.md           — hallazgos sesión 2D, evolución del schedule A(t)
-  findings_v2_nd.md        — extensión ND, diagnóstico del ruido
-  findings_v3_fairbench.md — benchmark con presupuesto igualado
-  findings_v4_rff.md       — Random Fourier Features, resultados Rastrigin ND
-  findings_v5_ackley.md    — benchmark Ackley, limitación en mesetas
-  findings_v6_schwefel.md  — benchmark Schwefel, perfil completo del algoritmo
-  findings_v7_rastrigin_analytic.md  — Benchmark Rastrigin con gradientes analíticos O(1)
-  findings_v8_no_abs.md              — Efecto contundente de permitir amplitud negativa
-  findings_v9_no_abs_ackley_schwefel.md — Validación en mesetas y en hiper-espacios de Schwefel
-  findings_v10_lengthscale.md        — Diagnóstico sobre la compresión de lengthscales
-  findings_v11_adam.md               — Demostrando porqué Adam Optimizer asfixia el "terremoto"
-  findings_v12_swarm.md              — Seismic Swarm: paralelización del muestreo sobre RFF analítico
-  findings_v13_swarm_d.md            — Enjambre estricto N=D y descubrimiento de trade-off de presupuesto
-  findings_v14_cycles.md             — Parametrización estricta de la oscilación sísmica a 10 ciclos
-  findings_v15_reactive.md           — Terremotos desencadenados por estancamiento (Bang-Bang Control)
-  findings_v16_momentum.md           — Momentum Crudo (Heavy-Ball) causando efecto honda y pérdida de octavas
-  findings_v17_temporal_octaves.md   — Sismos Fractales: aplicación de Series de Fourier a las octavas de amplitud temporales
-  findings_budgets_scale.md          — Evaluación masiva a gran escala (LOW, MEDIUM, HIGH) cruzando CMA-ES
-  summary_of_experiments.md          — Historia completa del origen y métricas tras 24h de hackathon
-  chat_arena*.md           — conversación original con la idea
-  chat_opus4.6.md          — prototipo inicial
-perlin_opt.py              — implementación 2D original (Perlin noise)
-perlin_opt_nd.py           — extensión ND con value noise
-perlin_opt_nd_fairbench.py — benchmark fair (presupuesto igualado)
-perlin_opt_nd_grf.py       — Seismic Descent con RFF (versión ND definitiva base)
-perlin_opt_nd_grf_analytic*.py — Repositorio incremental de las versiones Analíticas y de Enjambre (v7 a v17)
-benchmark_ackley.py        — benchmark genérico, función Ackley
-benchmark_schwefel.py      — benchmark función Schwefel
-benchmark_budgets.py       — Herramienta CLI de simulación paramétrica Multi-Presupuesto (Scale Up)
+seismic-descent/
+├── src/seismic_descent/            # Paquete Python núcleo instalable
+│   ├── core.py                     # SeismicSwarm (arquitectura campeona v20)
+│   ├── rff.py                      # Random Fourier Features (gradientes analíticos O(1))
+│   ├── torch_optimizer.py          # Optimizador SeismicOptimizer para PyTorch
+│   └── functions.py                # Rastrigin, Schwefel, Ackley, Griewank, Rosenbrock
+│
+├── benchmarks/                     # Suites de evaluación comparativa (vs SA, CMA-ES)
+│   ├── benchmark_suite.py          # Ejecutor automatizado de benchmarks CLI
+│   └── timing/                     # Pruebas de tiempo de cómputo y profiling
+│
+├── legacy/                         # Historial experimental cronológico preservado
+│   ├── perlin_opt/                 # v1 a v17 (Perlin, value noise, enjambres iniciales)
+│   ├── seismic_versions/           # v18 a v22, vmorph, y experimentos MNIST
+│   └── README.md                   # Documentación detallada del viaje experimental
+│
+├── tests/                          # Tests unitarios automatizados (pytest)
+│   ├── test_rff.py                 # Verificación de gradientes analíticos y propiedades RFF
+│   ├── test_seismic_swarm.py       # Pruebas de convergencia y respeto de límites
+│   └── test_torch_optimizer.py     # Validación de convergencia en optimizador PyTorch
+│
+├── visualizer/                     # Visualizadores interactivos HTML5/JS (GitHub Pages)
+│   ├── 1d_explorer.html            # Deformación 1D y mapa de ergodicidad
+│   ├── 2d_explorer.html            # Wireframe 2D y trayectorias del enjambre
+│   └── index.html                  # Mapa interactivo 2D
+│
+├── assets/                         # Gráficos y recursos visuales del repositorio
+├── docs/                           # Documentación teórica, hallazgos (findings_v1 a v23)
+└── scratch/                        # Espacio de trabajo para pruebas del desarrollador
 ```
 
 ## Próximos experimentos / Futuro del Proyecto

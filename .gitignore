@@ -1,9 +1,15 @@
 __pycache__/
 *.pyc
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
 _t.py
 _timing.py
 _timing_fair.py
 _*.py
+!__init__.py
 
 *.pdf
 
