@@ -6,6 +6,7 @@ from seismic_descent.core import SeismicSwarm, seismic_swarm
 from seismic_descent.rff import RandomFourierFeatures
 from seismic_descent.lissajous import LissajousWaveField, OrthogonalLissajousWaveField
 from seismic_descent.swarm_gravity import SeismicSwarmGravity, seismic_swarm_gravity
+from seismic_descent.anisotropic_hmc import SeismicAnisotropicHMC, seismic_anisotropic_hmc
 from seismic_descent.functions import ALL_FUNCTIONS
 
 __version__ = "0.20.0"
@@ -18,6 +19,8 @@ __all__ = [
     "OrthogonalLissajousWaveField",
     "SeismicSwarmGravity",
     "seismic_swarm_gravity",
+    "SeismicAnisotropicHMC",
+    "seismic_anisotropic_hmc",
     "ALL_FUNCTIONS",
     "SeismicOptimizer",
     "__version__",
