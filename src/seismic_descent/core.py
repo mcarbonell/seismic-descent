@@ -52,6 +52,7 @@ class SeismicSwarm:
         n_steps: int = 2000,
         n_cycles: int = 10,
         dt_base: float = 0.2,
+        dt_floor: float = 0.2,
         noise_amplitude: float = 0.5,
         noise_decay: float = 1.0,
         dt_cycles_multiplier: float = 5.0,
@@ -69,6 +70,7 @@ class SeismicSwarm:
         self.n_steps = n_steps
         self.n_cycles = n_cycles
         self.dt_base = dt_base
+        self.dt_floor = dt_floor
         self.noise_amplitude = noise_amplitude
         self.noise_decay = noise_decay
         self.dt_cycles_multiplier = dt_cycles_multiplier
@@ -161,8 +163,9 @@ class SeismicSwarm:
             # 5. Combined landscape gradient
             grad = f_grad_dir + noise_grad
 
-            # 6. Decoupled cyclic learning rate schedule
-            current_dt = self.dt_base * np.abs(np.sin(t * self.dt_cycles_multiplier))
+            # 6. Decoupled cyclic learning rate schedule with minimum floor
+            cyclic_scale = self.dt_floor + (1.0 - self.dt_floor) * np.abs(np.sin(t * self.dt_cycles_multiplier))
+            current_dt = self.dt_base * cyclic_scale
 
             # Update positions and project onto bounds
             x_norm -= current_dt * grad
@@ -195,6 +198,7 @@ def seismic_swarm(
     n_steps: int = 2000,
     n_particles: int = 10,
     dt_base: float = 0.2,
+    dt_floor: float = 0.2,
     noise_amplitude: float = 0.5,
     noise_decay: float = 1.0,
     n_cycles: int = 10,
@@ -210,6 +214,7 @@ def seismic_swarm(
         n_steps=n_steps,
         n_cycles=n_cycles,
         dt_base=dt_base,
+        dt_floor=dt_floor,
         noise_amplitude=noise_amplitude,
         noise_decay=noise_decay,
         dt_cycles_multiplier=dt_cycles_multiplier,

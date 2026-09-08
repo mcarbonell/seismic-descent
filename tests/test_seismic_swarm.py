@@ -65,3 +65,14 @@ def test_rastrigin_multimodal_escape():
     # A standard gradient descent gets stuck near f(x) ~ 40-70.
     # Seismic swarm escapes local minima into much deeper basins.
     assert best_val < 20.0
+
+
+def test_dt_floor_parameter():
+    bounds = np.array([[-5.12, 5.12]] * 2)
+    # Validate initialization with custom dt_floor
+    opt = SeismicSwarm(bounds=bounds, dt_floor=0.35)
+    assert opt.dt_floor == 0.35
+
+    _, val, _ = opt.optimize(SPHERE["fn"], SPHERE["grad"])
+    assert val < 0.1
+
