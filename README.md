@@ -30,7 +30,6 @@ noise(x) ≈ sqrt(2/R) * A * Σ_r cos(ω_r · x + t*drift_r + φ_r)
 ```
 
 Where `ω_r ~ N(0, 1/l²·I)` are vectors in R^D. Being N-Dimensional vectors, they force geometric spatial correlation and feature overlap in any high-dimensional search space instantly.
-
 ## Milestones & Evolution (v7 - v23 Champion)
 
 The repository condenses intensive empirical research where the algorithm transcended severe bottlenecks:
