@@ -10,17 +10,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
   - `benchmark smoke`: el workflow instalaba `cma scipy` pero
     `benchmarks/experiment_champion_v23.py` importa `matplotlib` →
     `ModuleNotFoundError`. Ahora instala `cma scipy matplotlib`.
-  - `pytest py3.11 / py3.12 (no torch) / py3.12 (torch CPU)`: fallaba
-    `test_v23_rastrigin_5d_orf_golden`. Causa raíz: `seismic_descent.orf`
-    usaba `np.linalg.qr`, cuyo resultado varía ±1e-15 (ulp) según la build de
-    OpenBLAS/LAPACK, y la dinámica del optimizador amplifica ese ruido a
-    O(1) (medido: 1e-15 → Δfinal ≈ 3.4 en Rastrigin 5D). Sustituido por una
-    Gram-Schmidt modificada determinista (solo aritmética elementwise +
-    `np.sum`, sin BLAS/LAPACK; matemáticamente equivalente al QR con
-    `diag(R) > 0`, misma distribución de Haar). El golden ORF se regeneró y
-    ahora es bit-idéntico en py3.12/py3.14 × numpy 2.0.2/2.2.6/2.5.3/2.4.2.
+  - `pytest py3.11 / py3.12 (no torch) / py3.12 (torch CPU)` (y posteriormente
+    toda la matriz): fallaba `test_v23_rastrigin_5d_orf_golden`. Causas y arreglo:
+    1. `seismic_descent.orf` usaba `np.linalg.qr`, cuyo resultado varía ±1e-15
+       (ulp) según la build de OpenBLAS/LAPACK, y la dinámica amplifica ese ruido
+       a O(1) (medido: Δz=1.3e-15 → Δfinal≈3.4). Sustituido por una Gram-Schmidt
+       modificada determinista (solo aritmética elementwise + `np.sum`, sin
+       BLAS/LAPACK; equivalente al QR con `diag(R) > 0`, misma distribución de
+       Haar). Con ello los 4 jobs de la matriz CI pasaron a dar un valor idéntico
+       entre numpy 2.0.2/2.2/2.5 (verificado en CI).
+    2. Queda ruido de ulp propio de plataforma (libm/BLAS Win vs Linux, medido
+       con un contenedor que reproducía el CI bit a bit). La trayectoria
+       ORF+Rastrigin es caótica y lo amplifica a O(1) (Win 2.1586 vs Linux
+       10.4040), por lo que el golden ORF se movió a **Sphere 5D** (mismo patrón
+       que el golden RFF): divergencia Win↔Linux de solo ~1e-14 relativa tras
+       300 pasos, con 5 órdenes de margen bajo `_RTOL=1e-9`.
   - Tests nuevos: `test_orf_construction_hash` (fija el digest SHA-256 de la
-    construcción ORF, detecta reintroducir dependencia de BLAS) y
+    construcción ORF, pasó en toda la matriz CI) y
     `test_mgs_matches_sign_fixed_qr` (equivalencia con el QR histórico).
 
 ## [0.24.0] - 2026-10-03
