@@ -11,9 +11,14 @@ try:
     import torch
     from torch.optim import Optimizer
     _TORCH_AVAILABLE = True
+    _NO_GRAD = torch.no_grad()
 except ImportError:
     Optimizer = object  # type: ignore
     _TORCH_AVAILABLE = False
+
+    def _NO_GRAD(fn):  # type: ignore
+        """No-op decorator fallback so the module imports without torch."""
+        return fn
 
 
 class SeismicOptimizer(Optimizer):
@@ -98,7 +103,7 @@ class SeismicOptimizer(Optimizer):
             omegas = torch.randn((R, total_params), generator=self.rng) / lengthscale
             self.state["OMEGAS"].append(omegas)
 
-    @torch.no_grad()
+    @_NO_GRAD
     def step(self, closure: Optional[Callable[[], float]] = None, loss: Optional[float] = None):
         """Perform a single optimization step."""
         loss_val = None

@@ -55,6 +55,14 @@ class SeismicChampionV23:
         Exponent alpha for Riemannian metric preconditioning.
     metric_beta : float, default=0.9
         Moving average factor for metric tracking.
+    noise_amp_dim_normalized : bool, default=False
+        If True, effective amplitude becomes noise_amplitude * sqrt(ref_dim / D)
+        (v24 configuration candidate; see docs/findings_v24_amplitud_raiz_d.md).
+        Default False preserves the historical v23 behavior exactly.
+    ref_dim : float, default=5.0
+        Reference dimension of the sqrt-D law (only used when
+        noise_amp_dim_normalized=True). 5.0 = the v24 definition (identical to
+        v23 at D=5).
     seed : Optional[int], default=1
         Random seed for reproducibility.
     """
@@ -77,6 +85,8 @@ class SeismicChampionV23:
         momentum_base: float = 0.7,
         anisotropic_power: float = 0.5,
         metric_beta: float = 0.9,
+        noise_amp_dim_normalized: bool = False,
+        ref_dim: float = 5.0,
         seed: Optional[int] = 1,
     ):
         self.bounds = np.asarray(bounds, dtype=np.float64)
@@ -99,6 +109,14 @@ class SeismicChampionV23:
         self.momentum_base = momentum_base
         self.anisotropic_power = anisotropic_power
         self.metric_beta = metric_beta
+        # v24 candidate: dimension-normalized amplitude amp' = amp * sqrt(ref_dim / D).
+        # Measured law: E||grad noise|| ~ amp * sqrt(D) / ell  (audit 2026, sec. 3.4);
+        # this keeps the noise-to-signal ratio dimension-invariant (ref_dim = 5).
+        self.noise_amp_dim_normalized = noise_amp_dim_normalized
+        # Reference dimension of the sqrt-D law. 5.0 preserves the v24 candidate
+        # definition (bit-identical to v23 at D=5). Empirical train/test tuning
+        # (informe_refdim_train_test.md) shifts the optimum toward ~2; see findings.
+        self.ref_dim = float(ref_dim)
         self.seed = seed
 
         self.center = (self.bounds[:, 1] + self.bounds[:, 0]) / 2.0
@@ -161,7 +179,7 @@ class SeismicChampionV23:
         diag_metric = np.ones(self.dim, dtype=np.float64)
 
         t = 0.0
-        dt_noise = (self.n_cycles * np.pi) / self.n_steps
+        dt_noise = (self.n_cycles * np.pi) / max(1, self.n_steps)
 
         # Initial state evaluation
         x_real = self.center + x_norm * self.half_range
@@ -181,6 +199,8 @@ class SeismicChampionV23:
             freq = 2.0 * decay
             sin_phase = np.sin(t * freq)
             amp = self.noise_amplitude * decay * sin_phase
+            if self.noise_amp_dim_normalized:
+                amp = amp * np.sqrt(self.ref_dim / self.dim)
 
             # 1. Objective gradient
             x_real = self.center + x_norm * self.half_range
@@ -207,7 +227,7 @@ class SeismicChampionV23:
             # 5. Directional gradient with preconditioning
             precond_grad = f_grad_mapped * precond
             norms = np.linalg.norm(precond_grad, axis=1, keepdims=True)
-            f_grad_dir = np.where(norms > 1e-8, precond_grad / norms, 0.0)
+            f_grad_dir = np.divide(precond_grad, norms, out=np.zeros_like(precond_grad), where=norms > 1e-8)
 
             # 6. Perturbation gradient (ORF / Lissajous / RFF)
             if self.noise_field is not None:
@@ -282,6 +302,8 @@ def seismic_champion_v23(
     gravity_strength: float = 0.4,
     momentum_base: float = 0.7,
     anisotropic_power: float = 0.5,
+    noise_amp_dim_normalized: bool = False,
+    ref_dim: float = 5.0,
     seed: Optional[int] = 1,
 ) -> Tuple[np.ndarray, float, Dict[str, List[float]]]:
     """
@@ -301,6 +323,36 @@ def seismic_champion_v23(
         gravity_strength=gravity_strength,
         momentum_base=momentum_base,
         anisotropic_power=anisotropic_power,
+        noise_amp_dim_normalized=noise_amp_dim_normalized,
+        ref_dim=ref_dim,
         seed=seed,
+    )
+    return opt.optimize(fn=fn, fn_grad=fn_grad, x0=x0_real)
+
+
+def seismic_champion_v24(
+    fn: Callable[[np.ndarray], np.ndarray],
+    fn_grad: Callable[[np.ndarray], np.ndarray],
+    x0_real: np.ndarray,
+    bounds: np.ndarray,
+    n_steps: int = 2000,
+    n_particles: int = 10,
+    noise_engine: str = "orf",
+    seed: Optional[int] = 1,
+    **kwargs,
+) -> Tuple[np.ndarray, float, Dict[str, List[float]]]:
+    """Champion v24 configuration = v23 with dimension-normalized noise amplitude.
+
+    Effective amplitude: noise_amplitude * sqrt(5 / D) at dimension D
+    (rationale and results: docs/findings_v24_amplitud_raiz_d.md).
+    """
+    kwargs.setdefault("noise_amp_dim_normalized", True)
+    opt = SeismicChampionV23(
+        bounds=bounds,
+        n_particles=n_particles,
+        n_steps=n_steps,
+        noise_engine=noise_engine,
+        seed=seed,
+        **kwargs,
     )
     return opt.optimize(fn=fn, fn_grad=fn_grad, x0=x0_real)

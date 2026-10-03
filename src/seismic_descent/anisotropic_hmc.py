@@ -169,7 +169,7 @@ class SeismicAnisotropicHMC:
         diag_metric = np.ones(self.dim, dtype=np.float64)
 
         t = 0.0
-        dt_noise = (self.n_cycles * np.pi) / self.n_steps
+        dt_noise = (self.n_cycles * np.pi) / max(1, self.n_steps)
 
         # Evaluate initial state
         x_real = self.center + x_norm * self.half_range
@@ -220,7 +220,7 @@ class SeismicAnisotropicHMC:
             # 5. Anisotropic Directional Gradient
             precond_grad = f_grad_mapped * precond  # Shape (N, D)
             norms = np.linalg.norm(precond_grad, axis=1, keepdims=True)
-            f_grad_dir = np.where(norms > 1e-8, precond_grad / norms, 0.0)
+            f_grad_dir = np.divide(precond_grad, norms, out=np.zeros_like(precond_grad), where=norms > 1e-8)
 
             # 6. Perturbation field gradient
             if self.noise_field is not None:

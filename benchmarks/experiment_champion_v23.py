@@ -36,13 +36,14 @@ except ImportError:
     _CMA_AVAILABLE = False
 
 
-def run_cmaes(fn, x0, bounds, eval_budget: int) -> Tuple[float, np.ndarray, np.ndarray]:
+def run_cmaes(fn, x0, bounds, eval_budget: int, seed: int = 1) -> Tuple[float, np.ndarray, np.ndarray]:
     if not _CMA_AVAILABLE:
         return float("nan"), np.array([1]), np.array([float("nan")])
     opts = cma.CMAOptions()
     opts["bounds"] = [bounds[:, 0].tolist(), bounds[:, 1].tolist()]
     opts["maxfevals"] = eval_budget
     opts["verbose"] = -9
+    opts["seed"] = int(seed)  # reproducible baseline (added 2026-10-03; previously unseeded)
     sigma0 = float(np.mean(bounds[:, 1] - bounds[:, 0]) * 0.2)
     es = cma.CMAEvolutionStrategy(list(x0), sigma0, opts)
 
@@ -131,7 +132,7 @@ def main():
                     "style": "--",
                 },
                 "CMA-ES": {
-                    "runner": lambda x0, s: run_cmaes(fn, x0, bounds, args.budget),
+                    "runner": lambda x0, s: run_cmaes(fn, x0, bounds, args.budget, seed=s),
                     "color": "#ef4444",  # Red
                     "style": ":",
                 },
@@ -157,6 +158,7 @@ def main():
                         evals_raw = np.arange(1, len(vals_raw) + 1) * n_particles
                     else:
                         bval, evals_raw, vals_raw = acfg["runner"](x0, trial + 1)
+                        # \"runner\" receives the trial seed; CMA-ES now uses it (see run_cmaes).
 
                     scores.append(bval)
                     interp_traj = np.interp(eval_grid, evals_raw, vals_raw)

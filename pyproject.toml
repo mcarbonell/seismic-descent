@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "seismic-descent"
-version = "0.20.0"
+version = "0.24.0"
 description = "Optimization algorithm based on gradient descent over a dynamic landscape perturbed by spatially correlated noise."
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "MIT"}
+license = {file = "LICENSE"}
 authors = [
     {name = "Mario R. Carbonell"}
 ]
