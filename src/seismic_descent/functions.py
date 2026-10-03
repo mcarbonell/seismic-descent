@@ -4,7 +4,7 @@ Standard mathematical benchmark functions and their analytic gradients.
 Functions support both 1D shape (D,) and 2D batch shape (N, D).
 """
 
-from typing import Dict, Any
+from typing import Any, Dict, Union
 import numpy as np
 
 

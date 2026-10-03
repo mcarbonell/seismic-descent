@@ -125,7 +125,7 @@ class SeismicSwarm:
             x_norm[0] = np.clip(x0_norm, -1.0, 1.0)
 
         t = 0.0
-        dt_noise = (self.n_cycles * np.pi) / self.n_steps
+        dt_noise = (self.n_cycles * np.pi) / max(1, self.n_steps)
 
         # Evaluate initial state
         x_real = self.center + x_norm * self.half_range
@@ -155,7 +155,7 @@ class SeismicSwarm:
 
             # 3. L2 Gradient Normalization (directional focus)
             norms = np.linalg.norm(f_grad_mapped, axis=1, keepdims=True)
-            f_grad_dir = np.where(norms > 1e-8, f_grad_mapped / norms, 0.0)
+            f_grad_dir = np.divide(f_grad_mapped, norms, out=np.zeros_like(f_grad_mapped), where=norms > 1e-8)
 
             # 4. RFF spatially correlated noise gradient
             noise_grad = self.rff.grad(x_norm, t, amplitude=amp)

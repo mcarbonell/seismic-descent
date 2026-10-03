@@ -34,13 +34,14 @@ except ImportError:
     _CMA_AVAILABLE = False
 
 
-def run_cmaes(fn, x0, bounds, budget: int) -> float:
+def run_cmaes(fn, x0, bounds, budget: int, seed: int = 1) -> float:
     if not _CMA_AVAILABLE:
         return float("nan")
     opts = cma.CMAOptions()
     opts["bounds"] = [bounds[:, 0].tolist(), bounds[:, 1].tolist()]
     opts["maxfevals"] = budget
     opts["verbose"] = -9
+    opts["seed"] = int(seed)  # reproducible baseline (added 2026-10-03; previously unseeded)
     sigma0 = float(np.mean(bounds[:, 1] - bounds[:, 0]) * 0.2)
     es = cma.CMAEvolutionStrategy(list(x0), sigma0, opts)
     while not es.stop():
@@ -49,7 +50,10 @@ def run_cmaes(fn, x0, bounds, budget: int) -> float:
     return float(es.result.fbest)
 
 
-def run_sa(fn, x0, bounds, budget: int) -> float:
+def run_sa(fn, x0, bounds, budget: int, seed: int = 1) -> float:
+    # Documented SA config (2026-10-03): T0=10, geometric cooling 0.999/step,
+    # Gaussian proposal with sigma = 5% of mean range. Now seeded for reproducibility.
+    rng = np.random.default_rng(seed)
     x = np.array(x0, dtype=float)
     current_val = float(fn(x))
     best_val = current_val
@@ -58,11 +62,11 @@ def run_sa(fn, x0, bounds, budget: int) -> float:
     step_size = float(np.mean(bounds[:, 1] - bounds[:, 0]) * 0.05)
 
     for _ in range(2, budget + 1):
-        noise = np.random.normal(0, step_size, size=len(x))
+        noise = rng.normal(0, step_size, size=len(x))
         x_new = np.clip(x + noise, bounds[:, 0], bounds[:, 1])
         new_val = float(fn(x_new))
         delta = new_val - current_val
-        if delta < 0 or np.random.random() < np.exp(-delta / max(t, 1e-10)):
+        if delta < 0 or rng.random() < np.exp(-delta / max(t, 1e-10)):
             x, current_val = x_new, new_val
         if current_val < best_val:
             best_val = current_val
@@ -151,7 +155,7 @@ def run_scaling_study(
                 for trial in range(n_trials):
                     rng = np.random.default_rng(trial * 1000 + dims * 10 + 42)
                     x0 = rng.uniform(-search_range, search_range, size=dims)
-                    cma_vals.append(run_cmaes(fn, x0, bounds, budget))
+                    cma_vals.append(run_cmaes(fn, x0, bounds, budget, seed=trial + 1))
                 t_cma = time.time() - t0
 
                 # 3. Simulated Annealing
@@ -160,7 +164,7 @@ def run_scaling_study(
                 for trial in range(n_trials):
                     rng = np.random.default_rng(trial * 1000 + dims * 10 + 42)
                     x0 = rng.uniform(-search_range, search_range, size=dims)
-                    sa_vals.append(run_sa(fn, x0, bounds, budget))
+                    sa_vals.append(run_sa(fn, x0, bounds, budget, seed=trial + 1))
                 t_sa = time.time() - t0
 
                 # Store metrics

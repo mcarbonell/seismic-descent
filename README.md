@@ -41,7 +41,7 @@ The repository condenses intensive empirical research where the algorithm transc
 - **Orthogonal Random Features (ORF)**: Block-orthonormal Haar random projections eliminate feature clustering and redundant wave directions in high dimensions ($D \ge 10, 20$).
 - **Incommensurate Lissajous Wave Fields**: Quasi-periodic wave fields governed by prime square roots ($\omega_d = \sqrt{p_d}$) provide Kronecker-Weyl ergodicity with $\mathcal{O}(D)$ analytic computation.
 - **Phase-Modulated Swarm Gravity**: Dynamic elastic attraction towards the champion particle $\mathbf{x}_{\text{best}}$ active during seismic calm ($\gamma(t) = \gamma_0(1 - |A(t)|/A_{\max})$) and suppressed during quakes to prevent premature entrapment.
-- **Symplectic Hamiltonian Momentum & Anisotropic Preconditioning (HMC)**: Phase-gated inertia and Riemannian metric tracking eliminate zig-zag oscillations along curved ravines (e.g., Rosenbrock).
+- **Phase-Gated Momentum & Anisotropic Preconditioning**: Phase-gated inertia and diagonal Riemannian metric tracking reduce zig-zag oscillations along curved ravines (e.g., Rosenbrock). *(Naming note: this is a phase-modulated heavy-ball, not a symplectic Hamiltonian Monte Carlo integrator; the class name `SeismicAnisotropicHMC` is kept for backward compatibility. The diagonal preconditioner is a swarm-level variant of RMSProp/Adam-style scaling — cite as related, not novel.)*
 
 ---
 
@@ -68,6 +68,8 @@ The **v23 Champion Architecture** synthesizes these discoveries into an all-in-o
 
 *Evaluated over 15 independent trials per function-dimension pair with a budget of 3,000 evaluations using `benchmarks/experiment_champion_v23.py`.*
 
+> **v24 configuration candidate (2026-10-03):** `seismic_champion_v24` = v23 with dimension-normalized amplitude `amp·√(5/D)`, **derived** (not tuned) from the measured law E‖∇noise‖ ∝ amp·√D/ℓ. On the definitive 36-cell benchmark (**31 trials**, budget 3000, `docs/audit_2026/informe_baselines_v24.md`): **v24 wins 21 of 24 differentiating cells** (it is bit-identical to v23 at D=5 by construction), with Trid 20D 2305→92 (**~25×**) and Sphere 20D 2.7×; it loses only on Levy (10D/20D), where large escape jumps need the raw amplitude. Historical v23 behavior is preserved bit-for-bit by default. A train/test split (`informe_refdim_train_test.md`) shows the optimal constant is `ref_dim ≈ 1` (train-selected 0.5 transfers: test ranks ref1>ref2>ref0.5 — e.g. Trid 20D reaches the global optimum −1502≈−1520), and that no single constant wins everywhere (Levy-class inverts the ordering). **ref_dim=1 is now the recommended configuration** (`SeismicChampionV23(noise_amp_dim_normalized=True, ref_dim=1.0)`): in the external 10-algorithm benchmark it is the best Seismic variant in **30/36 cells** and improves the honest niche vs IPOP-CMA-ES to **3 wins / 11 ties / 22 losses** (strictly better on **Schwefel 5D & 10D and Zakharov 20D**; exact ties across the Styblinski-Tang family; Rosenbrock 20D tied; Trid 20D −1445 of the −1516 by IPOP). An **adaptive-amplitude v25** was also built and tested (coherence-gated; `docs/findings_v25_amplitud_adaptativa.md`): the mechanism works as theorized, but the informed constant ref1 still wins on this homogeneous suite — v25c stays as the robust candidate for unknown/mixed landscapes. See `docs/findings_v24_amplitud_raiz_d.md`.
+
 ---
 
 ## Empirical Benchmark & Multi-Budget Scaling Analysis
@@ -88,9 +90,9 @@ In contrast, Seismic Descent's periodic multi-scale landscape oscillations keep 
 | **10,000** | 5.86 | **2.98** | 6.66 | CMA-ES | Seismic is **2.9x** faster |
 | **25,000** | **4.85** 🏆 | 6.96 ❌ | 5.44 | **SEISMIC** | Seismic is **1.3x** faster |
 
-*Metrics recorded over 15 independent trials per budget point on Rastrigin 5D using `benchmarks/benchmark_budget_scaling.py`.*
+*Metrics recorded over 15 independent trials per budget point on Rastrigin 5D using `benchmarks/benchmark_budget_scaling.py` (this study uses the **v20 base** architecture, not the v23 champion; CPU speedups are machine-dependent — treat them as order-of-magnitude).*
 
-### Convergence Dynamics & Ablation Highlights
+### Convergence Dynamics & Ablation Highlights (historical, v18–v22)
 
 ![Convergence Dynamics and Ablation Study](assets/convergence_study.png)
 
@@ -99,23 +101,15 @@ In contrast, Seismic Descent's periodic multi-scale landscape oscillations keep 
 3. **Phase-Modulated Swarm Gravity**: Adding cohesion towards $\mathbf{x}_{\text{best}}$ cuts median error by **35% on Rosenbrock 10D** and **58% on Ackley 5D**.
 
 
-## Key Property: Seismic Ergodicity
+## Key Property: Seismic Ergodicity (Coverage)
 
-A fundamental discovery in the development of the algorithm (consolidated in v19) is that the exploration driven by correlated noise must be **ergodic**.
+A fundamental property of the algorithm (consolidated in v19) is that exploration driven by correlated noise must be **ergodic in the coverage sense**: the perturbed gradient field keeps the swarm moving across the *entire* search domain instead of freezing in the deepest nearby basin.
 
-Instead of blindly shaking the particle with high-frequency "white noise", *Seismic Descent* generates **complete, coherent topological landscapes** of low and high frequencies (via RFF octaves), and smoothly morphs (interpolates) from one random landscape to the next over time.
+Instead of blindly shaking the particle with high-frequency "white noise", *Seismic Descent* generates **coherent topological landscapes** (via RFF/ORF fields) and smoothly morphs them over time, so the swarm flows through the terrain like a liquid.
 
-This continuous mutation mathematically guarantees that a particle, guided purely by the gradient of this "mutating ground", will eventually explore and visit the entirety of the search space without getting trapped in infinite loops or plateaus. **Ergodicity** is what allows the swarm to flow through the terrain like a liquid, guaranteeing an escape from even the deepest local minima.
+**Verification status (2026-10-03, `docs/audit_2026/v2_ergodicidad.py`):** on 1D Rastrigin with the packaged optimizer, the measured grid coverage is **100%** and the position autocorrelation decays with lag (20k-step runs, N=1 and N=10). This is the property Seismic Descent actually exploits, and it is empirically reproducible.
 
-### Empirical Thermodynamic Properties (Laplacian Ergodicity)
-
-![Laplacian Ergodic Histogram](assets/laplacian_ergodicity.png)
-*Notice how the green ergodicity histogram perfectly draws a sharp Laplacian distribution ($e^{-|x|}$) around each local minimum. The peak height directly correlates with the minimum's depth, while the width correlates with the steepness of the basin walls.*
-
-Observations from the 1D visualizer reveal a profound statistical mechanics property: as `t -> ∞`, the particle's spatial probability density function (the ergodic heatmap) converges into sharp **Laplacian** peaks centered at local minima.
-
-1. **Boltzmann-Gibbs Emulation**: The depth of a minimum determines the exact statistical amplitude of the peak. This means Seismic Descent naturally performs robust Monte Carlo sampling equivalent to a thermodynamic system.
-2. **Heavy-Tailed Escapes**: Unlike traditional Gaussian (Brownian) noise used in Langevin dynamics or SGD ($e^{-x^2}$), the **Laplacian** signature ($e^{-|x|}$) empirically proves that the seismic spatial field induces **heavy-tailed jumps**. The probability of the particle massively leaping out of a basin's boundaries is orders of magnitude higher than in standard random walks. This mathematically explains the algorithm's exceptional capability to escape sub-optimal valleys where standard optimizers get permanently trapped.
+> ⚠️ **Retracted claim (Laplacian ergodicity).** An earlier version of this README (and `docs/theory.md`) claimed that the particle's ergodic density converges to **Laplacian** peaks ($e^{-|x|}$, "heavy-tailed Boltzmann-like signature"). Rigorous verification against the *packaged* optimizer **does not support it**: the per-basin folded density shows *negative* excess kurtosis (−0.6…−0.85 vs the +3 required by a Laplace law) and a Gaussian fit dominates Laplace in KS/AIC across all tested configurations. The original observation came from the interactive 1D visualizer, whose dynamics (auto-adaptive amplitude, greedy acceptance, step clipping) differ from the package optimizer. Corresponding figures and theory notes are kept for provenance in `assets/` and `docs/theory.md` (which carries a retraction notice); see the full analysis in `docs/audit_2026/AUDITORIA_VERIFICADA_2026.md` §3.2.
 
 ## Interactive Visualizers
 
@@ -186,10 +180,12 @@ python -m benchmarks.experiment_champion_v23 --dims 5 10 20 --trials 15
 python -m benchmarks.benchmark_suite --dims 5 --trials 5
 ```
 
-Run automated tests (26 unit tests):
+Run automated tests (51 tests — 50 pass without optional dependencies; the PyTorch test is skipped unless `torch` is installed, 51 with it):
 ```bash
 pytest -v
 ```
+
+Continuous integration runs this suite on Python 3.9–3.12, with and without torch CPU, plus a benchmark smoke test (see `.github/workflows/tests.yml`).
 
 ## PyTorch Integration
 
@@ -209,13 +205,15 @@ optimizer = SeismicOptimizer(
 
 See [legacy/seismic_versions/benchmark_mnist.py](legacy/seismic_versions/benchmark_mnist.py) for a complete neural network training benchmark and [docs/pytorch_optimizer.md](docs/pytorch_optimizer.md) for technical derivations.
 
-### Latest Benchmark (MNIST - 20 Epochs)
+### Latest Benchmark (MNIST - 20 Epochs) — *preliminary, single-seed*
 
 | Optimizer | Accuracy | Margin |
 | :--- | :--- | :--- |
 | **SGD** | **98.28%** | Base |
-| **Adaptive Floored Seismic** | **97.90%** | ✅ Beats Adam |
+| **Adaptive Floored Seismic** | **97.90%** | within noise of Adam |
 | **Adam** | 97.79% | - |
+
+> ⚠️ *These are single-run numbers without repetitions or dispersion; the ±0.1–0.2 pp spread typical of MNIST seeds makes the +0.11 pp gap statistically meaningless as stated. The current PyTorch optimizer is also a **prototype**: it materializes an `R × #params` noise matrix (feasible only up to ~1M-parameter models) and does not track the best iterate (unlike the NumPy core). Treat this line of work as exploratory until a scalable variant lands.*
 
 ## Project Structure
 
@@ -230,7 +228,8 @@ seismic-descent/
 │   ├── core.py                     # SeismicSwarm (v20 base architecture)
 │   ├── rff.py                      # Canonical Random Fourier Features
 │   ├── torch_optimizer.py          # PyTorch SeismicOptimizer module
-│   └── functions.py                # Rastrigin, Schwefel, Ackley, Griewank, Rosenbrock
+│   ├── functions.py                # Rastrigin, Schwefel, Ackley, Griewank, Rosenbrock, Sphere
+│   └── functions_extended.py       # Levy, Michalewicz, Zakharov, Styblinski-Tang, Dixon-Price, Trid
 │
 ├── benchmarks/                     # Benchmark runners and comparative suites
 │   ├── experiment_champion_v23.py  # Unified Champion v23 benchmark (5D, 10D, 20D)
@@ -238,14 +237,18 @@ seismic-descent/
 │   ├── experiment_orthogonal_lissajous.py # Orthogonal Lissajous waves
 │   ├── experiment_anisotropic_hmc.py # Anisotropic metric & HMC ablation
 │   ├── benchmark_budget_scaling.py # Multi-budget scaling vs CMA-ES (500 to 25k)
-│   └── benchmark_suite.py          # Automated CLI benchmark runner (vs SA & CMA-ES)
+│   ├── benchmark_suite.py          # Automated CLI benchmark runner (vs SA & CMA-ES)
+│   ├── baselines.py                # Seeded reference baselines: CMA-ES, IPOP-CMA-ES, PSO, L-BFGS-B multistart, random search
+│   ├── stats.py                    # Wilcoxon signed-rank + Holm-Bonferroni utilities
+│   ├── experiment_ablation_noise.py     # Central-hypothesis ablation: correlated vs power-matched white vs none
+│   └── experiment_component_ablation.py # v23 leave-one-out + amplitude sensitivity (√D scaling)
 │
 ├── legacy/                         # Preserved chronological experimental versions
 │   ├── perlin_opt/                 # v1 to v17 (Perlin, value noise, early RFF swarms)
 │   ├── seismic_versions/           # v18 to v22, vmorph, and MNIST experiments
 │   └── README.md                   # Detailed experimental history guide
 │
-├── tests/                          # Automated unit tests (26 tests, 100% passing)
+├── tests/                          # Automated unit tests (51 tests; includes golden regression locks)
 │   ├── test_champion_v23.py        # Champion v23 tests
 │   ├── test_orf.py                 # ORF Haar/QR orthogonality and gradient tests
 │   ├── test_orthogonal_lissajous.py# Orthogonal Lissajous gradient tests
@@ -263,11 +266,34 @@ seismic-descent/
 │
 ├── assets/                         # Visual assets, scaling curves, and README graphics
 ├── docs/                           # Research findings (findings_v1 to v23), theory notes
-└── results/                        # Generated benchmark plots, JSON data, and reports
+│   └── audit_2026/                 # Verified audit + reproducible verification scripts and reports
+├── docs/PROVENANCE.md              # Human/agent authorship disclosure
+└── results/                        # Generated benchmark plots, JSON data, and reports (git-ignored)
 ```
+
+## Limitations (honest assessment)
+
+- **Requires analytic gradients** of the objective (or a trustworthy estimator), unlike pure black-box methods.
+- **The seismic perturbation is not free-lunch everywhere.** Formal ablations (12 functions × {2,5,10,20}D, paired trials, Wilcoxon+Holm; `docs/audit_2026/informe_ablacion_ruido.md`) show the perturbation helps on highly multimodal landscapes but **hurts on near-unimodal ones** (e.g., Ackley, Dixon-Price, Trid at higher D), where the champion's gravity/momentum terms carry the win.
+- **Noise-to-signal ratio grows as √D** (measured: 1.4× at D=2 → 5.6× at D=20 for the RFF field at amp=0.5; see `docs/audit_2026/AUDITORIA_VERIFICADA_2026.md` §3.4), degrading behavior in high dimensions unless amplitude is dim-normalized (candidate fix evaluated in `informe_ablacion_componentes.md`).
+- **Power-matched i.i.d. noise is often competitive** with correlated noise at low D; the correlation advantage is clearest at higher D on multimodal landscapes. The precise regime map is an open question the project is characterizing.
+- **No convergence guarantee**: `noise_decay=1.0` keeps the system oscillating forever (by design — it is an *anytime* optimizer that relies on external best-point tracking).
+
+## Reproducing the Reported Results
+
+```bash
+pip install -e ".[benchmark]"   # numpy + matplotlib + cma (+ scipy for stats)
+make test                        # unit + golden regression tests
+make ablation                    # central-hypothesis ablation (correlated vs white vs none)
+make components                  # v23 leave-one-out + amplitude sensitivity
+make champion                    # README champion table (15 trials, 5D/10D/20D)
+```
+
+Every benchmark writes raw JSON to `results/` plus a Markdown report (with Wilcoxon signed-rank + Holm correction) to `docs/audit_2026/`. The 2026-10-03 full-repository audit and its verification scripts live in `docs/audit_2026/`.
 
 ## Future Scope
 
 - **Hyperparameter Sweeping**: Conducting formal automated Grid-Search bounds to tie dimension variance $D$ across strict optimal ruleses for $K$ cycles and spatial `$A$` amplitude bounds.
-- **Machine Learning Integration**: Forking gradient hooks directly into Pytorch ML logic to benchmark `Seismic Optimizers` in deep parameter spaces (e.g., standard MNIST tests), utilizing training epochs to map noise drifts.
+- **Machine Learning Integration**: Forking gradient hooks directly into Pytorch ML logic to benchmark `Seismic Optimizers` in deep parameter spaces (e.g., standard MNIST tests), utilizing training epochs to map noise drifts. Requires a scalable noise field (the current `R × #params` matrix is only viable below ~1M parameters).
 - **Non-Euclidean Topology Adapting**: Re-architecting RFF frameworks as discrete cost matrices to battle Traveling Salesman Problems (TSP).
+- **Dimension-normalized amplitude**: adopt the $\\mathcal{O}(\\sqrt{D})$ noise-scaling correction if the sensitivity study confirms it (see Reproducing section).

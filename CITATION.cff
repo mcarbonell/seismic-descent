@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "Seismic Descent: Global Optimization via Spatially Correlated Landscape Deformation"
+authors:
+  - family-names: "Carbonell"
+    given-names: "Mario R."
+version: 0.24.0
+date-released: 2026-10-03
+repository-code: "https://github.com/mcarbonell/seismic-descent"
+license: MIT
+keywords:
+  - global optimization
+  - random fourier features
+  - landscape deformation
+  - correlated noise
+  - derivative-based optimization
+abstract: >-
+  Seismic Descent is a global optimization algorithm that perturbs the
+  objective landscape with a time-varying, spatially correlated random
+  field (RFF/ORF/Lissajous), letting plain gradient descent escape
+  local minima while tracking the best point against the unperturbed
+  objective.

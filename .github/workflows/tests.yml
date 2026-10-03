@@ -1,0 +1,64 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    name: pytest py${{ matrix.python-version }} (no torch)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install package + test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest
+      - name: Run tests (torch-free path)
+        run: pytest -q
+
+  pytest-torch:
+    runs-on: ubuntu-latest
+    name: pytest py3.12 (torch CPU)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package + torch CPU
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Run tests (includes PyTorch optimizer test)
+        run: pytest -q
+
+  benchmark-smoke:
+    runs-on: ubuntu-latest
+    name: benchmark smoke (fast sanity)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install cma scipy
+      - name: Champion v23 smoke (1 trial, tiny budget)
+        run: python -m benchmarks.experiment_champion_v23 --dims 5 --trials 1 --budget 300 --functions rastrigin

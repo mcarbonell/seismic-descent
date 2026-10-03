@@ -50,7 +50,7 @@ El desarrollo del algoritmo ha evolucionado superando importantes cuellos de bot
 - **Frecuencias Ortogonales (ORF)**: Proyecciones aleatorias estructuradas por bloques ortonormales QR de la medida de Haar que eliminan el *clustering* y los vectores redundantes en alta dimensión ($D \ge 10, 20$).
 - **Ondas Inconmensurables de Lissajous**: Campos de ondas deterministas cuasi-periódicos con frecuencias basadas en raíces de primos ($\omega_d = \sqrt{p_d}$) que garantizan ergodicidad por el Teorema de Kronecker-Weyl con coste $\mathcal{O}(D)$.
 - **Acoplamiento Gravitacional del Enjambre**: Fuerza de cohesión elástica hacia la campeona $\mathbf{x}_{\text{best}}$ activa durante la calma sísmica y silenciada durante los sismos ($\gamma(t) = \gamma_0(1 - |A(t)|/A_{\max})$).
-- **Momento Hamiltoniano Simpléctico y Métrica Anisótropa (HMC)**: Inercia con fricción de fase y seguimiento de curvatura Riemanniana que eliminan los rebotes transversales en cañones curvados (como Rosenbrock).
+- **Momento Modulado por Fase y Métrica Anisótropa**: Inercia con fricción de fase y seguimiento de métrica diagonal que reducen los rebotes transversales en cañones curvados (como Rosenbrock). *(Nota de nomenclatura: es un heavy-ball modulado por fase, no un integrador simpléctico de Monte Carlo Hamiltoniano; el nombre de clase `SeismicAnisotropicHMC` se mantiene por compatibilidad. El precondicionador diagonal es una variante a nivel de enjambre del escalado tipo RMSProp/Adam — debe citarse como relacionado, no como novedad.)*
 
 ---
 
@@ -76,6 +76,8 @@ La **Arquitectura Campeona v23** sintetiza todos estos descubrimientos en un opt
 | **Tiempo Medio (15 trials)** | **0.28s** | **0.51s** | **0.87s** | **3.22s** | ⚡ **6x a 10x más rápido que CMA-ES** |
 
 *Evaluado con 15 repeticiones independientes por función y dimensión con un presupuesto de 3.000 evaluaciones mediante `benchmarks/experiment_champion_v23.py`.*
+
+> **Candidata v24 (2026-10-03):** `seismic_champion_v24` = v23 con amplitud normalizada por dimensión `amp·√(5/D)`, **derivada** (no tunada) de la ley medida E‖∇ruido‖ ∝ amp·√D/ℓ. En el benchmark definitivo de 36 celdas (**31 trials**, presupuesto 3000, `docs/audit_2026/informe_baselines_v24.md`): **v24 gana 21 de las 24 celdas diferenciadoras** (es bit-idéntica a v23 en D=5 por construcción), con Trid 20D 2305→92 (**~25×**) y Sphere 20D 2.7×; solo pierde en Levy (10D/20D), donde los saltos grandes de escape necesitan la amplitud cruda. El comportamiento histórico v23 se preserva bit a bit por defecto. Un split train/test (`informe_refdim_train_test.md`) muestra que la constante óptima es `ref_dim ≈ 1` (la selección train 0.5 transfiere: ranks test ref1>ref2>ref0.5 — p. ej. Trid 20D alcanza el óptimo global −1502≈−1520), y que ninguna constante única gana en todas partes (la clase Levy invierte el orden). **ref_dim=1 es ahora la configuración recomendada** (`SeismicChampionV23(noise_amp_dim_normalized=True, ref_dim=1.0)`): en el benchmark externo de 10 algoritmos es el mejor sísmico en **30/36** celdas y mejora el nicho honesto frente a IPOP-CMA-ES a **3 victorias / 11 empates / 22 derrotas** (estrictamente mejor en **Schwefel 5D y 10D y Zakharov 20D**; empates exactos en toda la familia Styblinski-Tang; Rosenbrock 20D empatado; Trid 20D −1445 del −1516 de IPOP). También construimos y probamos una **v25 de amplitud adaptativa** (gate de coherencia; `docs/findings_v25_amplitud_adaptativa.md`): el mecanismo funciona como predijo la teoría, pero la constante informada ref1 sigue ganando en esta suite homogénea — v25c queda como candidata robusta para paisajes desconocidos o mezclados. Ver `docs/findings_v24_amplitud_raiz_d.md`.
 
 ---
 
@@ -116,13 +118,13 @@ Una propiedad distintiva de Seismic Descent es su **capacidad continua de desata
 - El espacio es extremadamente mal acondicionado si no se usa normalización de gradiente.
 
 
-## Propiedad Clave: Ergodicidad Sísmica
+## Propiedad Clave: Ergodicidad Sísmica (Cobertura)
 
-Un descubrimiento fundamental en el desarrollo del algoritmo (consolidado en la v19) es que la exploración generada por el ruido correlacionado debe ser **ergódica**. 
+Una propiedad fundamental del algoritmo (consolidada en la v19) es que la exploración generada por el ruido correlacionado debe ser **ergódica en el sentido de cobertura**: el campo de gradiente perturbado mantiene al enjambre recorriendo *todo* el dominio en vez de congelarse en la cuenca más profunda cercana.
 
-En lugar de sacudir ciegamente a la partícula con "ruido blanco" de alta frecuencia, *Seismic Descent* genera **paisajes topológicos completos y coherentes** de baja y alta frecuencia (mediante octavas de RFF), y realiza un *morphing* (interpolación suave) de un paisaje a otro con el tiempo. 
+**Estado de verificación (2026-10-03, `docs/audit_2026/v2_ergodicidad.py`):** con el optimizador del paquete sobre Rastrigin 1D, la cobertura de rejilla medida es del **100%** y la autocorrelación de posición decae con el retardo (corridas de 20k pasos, N=1 y N=10). Esta es la propiedad que Seismic Descent explota realmente, y es empíricamente reproducible.
 
-Esta mutación continua garantiza matemáticamente que una partícula, guiada puramente por el gradiente de este "suelo mutante", acabará explorando y visitando la totalidad del espacio de búsqueda sin quedarse atascada en ciclos infinitos o mesetas. La **ergodicidad** es lo que permite que el enjambre fluya por el terreno como un líquido, garantizando el escape de los mínimos locales más profundos.
+> ⚠️ **Afirmación retractada (ergodicidad Laplaciana).** Una versión anterior de este README afirmaba que la densidad ergódica converge a picos **Laplacianos** ($e^{-|x|}$). La verificación rigurosa con el optimizador *del paquete* **no la sostiene**: la densidad plegada por cuenca muestra kurtosis en exceso *negativa* (−0.6…−0.85 frente al +3 de una ley de Laplace) y el ajuste Gaussiano domina al Laplaciano en KS/AIC en todas las configuraciones. La observación original procedía del visualizador 1D interactivo, cuya dinámica difiere del optimizador del paquete. Detalles en `docs/audit_2026/AUDITORIA_VERIFICADA_2026.md` §3.2 y en el aviso de retractación de `docs/theory.md`.
 
 ## Instalación
 
@@ -154,7 +156,7 @@ bounds = [[-5.12, 5.12]] * 10
 x0 = [3.0] * 10
 
 # Optimizar mediante la arquitectura campeona v23
-# (Integra ORF, Gravedad del Enjambre, Momento Hamiltoniano y Métrica Anisótropa)
+# (Integra ORF, Gravedad del Enjambre, Momento modulado por fase y Métrica Anisótropa)
 best_x, best_val, info = seismic_champion_v23(
     fn=rastrigin["fn"],
     fn_grad=rastrigin["grad"],
@@ -183,10 +185,12 @@ python -m benchmarks.experiment_champion_v23 --dims 5 10 20 --trials 15
 python -m benchmarks.benchmark_suite --dims 5 --trials 5
 ```
 
-Ejecutar tests automatizados (26 tests unitarios):
+Ejecutar tests automatizados (51 tests — 50 pasan sin dependencias opcionales; el de PyTorch se omite salvo que `torch` esté instalado, 51 en ese caso):
 ```bash
 pytest -v
 ```
+
+La integración continua ejecuta esta suite en Python 3.9–3.12, con y sin torch CPU, más una prueba de humo del benchmark (ver `.github/workflows/tests.yml`).
 
 ## Integración con PyTorch
 
@@ -206,13 +210,15 @@ optimizer = SeismicOptimizer(
 
 Consulta [legacy/seismic_versions/benchmark_mnist.py](legacy/seismic_versions/benchmark_mnist.py) para un ejemplo completo de entrenamiento en red neuronal y [docs/pytorch_optimizer.es.md](docs/pytorch_optimizer.es.md) para detalles técnicos.
 
-### Último Benchmark (MNIST - 20 Épocas)
+### Último Benchmark (MNIST - 20 Épocas) — *preliminar, una sola semilla*
 
 | Optimizador | Precisión | Margen |
 | :--- | :--- | :--- |
 | **SGD** | **98.28%** | Base |
-| **Adaptive Floored Seismic** | **97.90%** | ✅ Supera a Adam |
+| **Adaptive Floored Seismic** | **97.90%** | dentro del ruido de Adam |
 | **Adam** | 97.79% | - |
+
+> ⚠️ *Cifras de una única corrida, sin repeticiones ni dispersión: la variación típica entre semillas en MNIST (±0.1–0.2 pp) hace estadísticamente irrelevante la diferencia de +0.11 pp. Además, el optimizador PyTorch actual es un **prototipo**: materializa una matriz de ruido `R × #params` (viable solo hasta ~1M de parámetros) y no mantiene el mejor iterando. Tratar esta línea como exploratoria.*
 
 ## Estructura del Proyecto
 
@@ -262,6 +268,26 @@ seismic-descent/
 ├── docs/                           # Documentación teórica, hallazgos (findings_v1 a v23)
 └── results/                        # Gráficas generadas, datos JSON e informes Markdown
 ```
+
+## Limitaciones (evaluación honesta)
+
+- **Requiere gradientes analíticos** del objetivo (o estimadores fiables), a diferencia de los métodos puros de caja negra.
+- **La perturbación sísmica no gana en todas partes.** Ablaciones formales (12 funciones × {2,5,10,20}D, trials pareados, Wilcoxon+Holm; `docs/audit_2026/informe_ablacion_ruido.md`) muestran que la perturbación ayuda en paisajes altamente multimodales pero **perjudica en casi unimodales** (Ackley, Dixon-Price, Trid en D alta).
+- **El ratio ruido/señal crece como √D** (medido: 1.4× en D=2 → 5.6× en D=20), degradando el comportamiento en alta dimensión salvo normalización de amplitud por dimensión (evaluada en `informe_ablacion_componentes.md`).
+- **El ruido i.i.d. de potencia equiparada es competitivo** en D baja; la ventaja de la correlación es más clara en D alta sobre paisajes multimodales.
+- **Sin garantía de convergencia**: `noise_decay=1.0` mantiene el sistema oscilando para siempre (por diseño — es un optimizador *anytime* que depende del seguimiento externo del mejor punto).
+
+## Reproducir los resultados
+
+```bash
+pip install -e ".[benchmark]"
+make test        # tests unitarios + golden regression
+make ablation    # ablación de la hipótesis central (correlacionado vs blanco vs apagado)
+make components  # leave-one-out v23 + sensibilidad de amplitud
+make champion    # tabla champion del README (15 trials, 5D/10D/20D)
+```
+
+Cada benchmark escribe JSON crudo en `results/` y un informe Markdown (Wilcoxon + Holm) en `docs/audit_2026/`.
 
 ## Próximos experimentos / Futuro del Proyecto
 
