@@ -3,6 +3,26 @@
 Todos los cambios relevantes del proyecto se documentan aquí.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [0.24.1] - 2026-10-03
+
+### Corregido
+- **CI rojo en 4 jobs** (push a `main`, run #2):
+  - `benchmark smoke`: el workflow instalaba `cma scipy` pero
+    `benchmarks/experiment_champion_v23.py` importa `matplotlib` →
+    `ModuleNotFoundError`. Ahora instala `cma scipy matplotlib`.
+  - `pytest py3.11 / py3.12 (no torch) / py3.12 (torch CPU)`: fallaba
+    `test_v23_rastrigin_5d_orf_golden`. Causa raíz: `seismic_descent.orf`
+    usaba `np.linalg.qr`, cuyo resultado varía ±1e-15 (ulp) según la build de
+    OpenBLAS/LAPACK, y la dinámica del optimizador amplifica ese ruido a
+    O(1) (medido: 1e-15 → Δfinal ≈ 3.4 en Rastrigin 5D). Sustituido por una
+    Gram-Schmidt modificada determinista (solo aritmética elementwise +
+    `np.sum`, sin BLAS/LAPACK; matemáticamente equivalente al QR con
+    `diag(R) > 0`, misma distribución de Haar). El golden ORF se regeneró y
+    ahora es bit-idéntico en py3.12/py3.14 × numpy 2.0.2/2.2.6/2.5.3/2.4.2.
+  - Tests nuevos: `test_orf_construction_hash` (fija el digest SHA-256 de la
+    construcción ORF, detecta reintroducir dependencia de BLAS) y
+    `test_mgs_matches_sign_fixed_qr` (equivalencia con el QR histórico).
+
 ## [0.24.0] - 2026-10-03
 
 ### Añadido

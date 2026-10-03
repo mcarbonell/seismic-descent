@@ -1,8 +1,11 @@
 """Unit tests for Orthogonal Random Features (ORF) module."""
 
+import hashlib
+import sys
+
 import numpy as np
 import pytest
-from seismic_descent.orf import OrthogonalRandomFeatures
+from seismic_descent.orf import OrthogonalRandomFeatures, _modified_gram_schmidt
 
 
 def test_orf_shapes():
@@ -51,3 +54,32 @@ def test_orf_eval_and_grad_consistency():
 
     np.testing.assert_allclose(v_sep, v_comb, atol=1e-12)
     np.testing.assert_allclose(g_sep, g_comb, atol=1e-12)
+
+
+def test_mgs_matches_sign_fixed_qr():
+    """The deterministic MGS must equal the historical sign-fixed QR up to rounding."""
+    rng = np.random.default_rng(0)
+    g = rng.normal(size=(8, 8))
+
+    q = _modified_gram_schmidt(g)
+    np.testing.assert_allclose(q.T @ q, np.eye(8), atol=1e-12)
+
+    q_ref, r_ref = np.linalg.qr(g)
+    ph = np.sign(np.diag(r_ref))
+    ph[ph == 0] = 1.0
+    np.testing.assert_allclose(q, q_ref * ph[None, :], atol=1e-12)
+
+
+def test_orf_construction_hash():
+    """The ORF basis must be bit-identical across platforms/numpy/BLAS builds.
+
+    The construction is BLAS-free (deterministic modified Gram-Schmidt). Any
+    reintroduction of np.linalg.qr — whose ±1e-15 ulp noise across OpenBLAS
+    builds the optimizer amplifies into O(1) trajectory differences — changes
+    this digest and breaks the ORF golden test on part of the CI matrix.
+    """
+    if sys.byteorder != "little":
+        pytest.skip("digest pinned for little-endian platforms (CI: x86-64)")
+    orf = OrthogonalRandomFeatures(dim=5, r=64, seed=42)
+    digest = hashlib.sha256(np.ascontiguousarray(orf.z[0]).tobytes()).hexdigest()
+    assert digest == "a60904b8548b4f5f4be8d23c1fdf1a42255ad9ce4580a57811d4638b5e392e34"

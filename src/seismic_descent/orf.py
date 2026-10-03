@@ -3,7 +3,8 @@ orf.py — Orthogonal Random Features (ORF) representation for Gaussian Random F
 
 Implements structured orthogonal random features (Yu et al., NeurIPS 2016).
 Replaces standard independent Gaussian projection vectors with blocks of mutually
-orthogonal random vectors via QR decomposition with Chi-distributed radial lengths.
+orthogonal random vectors via Gram-Schmidt orthogonalization (QR-equivalent,
+deterministic across BLAS builds) with Chi-distributed radial lengths.
 
 This drastically reduces kernel approximation variance and eliminates redundant
 directional sampling in high dimensions (D >= 10, 20, 50).
@@ -11,6 +12,32 @@ directional sampling in high dimensions (D >= 10, 20, 50).
 
 from typing import Optional, Tuple, Union
 import numpy as np
+
+
+def _modified_gram_schmidt(g: np.ndarray) -> np.ndarray:
+    """Orthonormal basis of the columns of ``g`` (modified Gram-Schmidt).
+
+    Mathematically equivalent to ``np.linalg.qr(g)`` with the sign convention
+    ``diag(R) > 0`` (Haar sampling convention), but built exclusively from
+    elementwise arithmetic and ``np.sum`` (pairwise summation) — no BLAS or
+    LAPACK calls. ``np.linalg.qr`` returns values that differ in the last ulp
+    (±1e-15) across OpenBLAS/LAPACK builds, and the optimizer amplifies that
+    noise into O(1) trajectory differences, which made ORF golden regression
+    tests pass only on the reference build (see tests/test_golden_regression.py).
+    """
+    d = g.shape[0]
+    q = np.empty_like(g)
+    for j in range(d):
+        v = g[:, j].copy()
+        for i in range(j):
+            v -= np.sum(q[:, i] * v) * q[:, i]
+        nrm = float(np.sqrt(np.sum(v * v)))
+        if nrm == 0.0:
+            # Degenerate draw (probability ~2^(-52*d) for Gaussian input):
+            # keep the historical LAPACK behaviour instead of failing.
+            return np.linalg.qr(g)[0]
+        q[:, j] = v / nrm
+    return q
 
 
 class OrthogonalRandomFeatures:
@@ -58,13 +85,12 @@ class OrthogonalRandomFeatures:
             for _ in range(n_blocks):
                 # 1. Sample Gaussian matrix
                 g = rng.normal(0, 1.0, size=(dim, dim))
-                # 2. QR decomposition to sample uniformly from Haar measure O(D)
-                q, r_mat = np.linalg.qr(g)
-                # Correct sign for unique Haar distribution
-                diag_r = np.diag(r_mat)
-                ph = np.sign(diag_r)
-                ph[ph == 0] = 1.0
-                q = q * ph[None, :]
+                # 2. Orthonormalize to sample uniformly from Haar measure O(D).
+                #    Deterministic MGS instead of np.linalg.qr: bit-identical
+                #    across platforms/numpy/BLAS builds (see _modified_gram_schmidt).
+                #    MGS yields diag(R) > 0 by construction, i.e. the same sign
+                #    convention as the historical sign-fixed QR.
+                q = _modified_gram_schmidt(g)
 
                 # 3. Chi-distributed radial scaling (norm of D-dimensional Gaussian)
                 s = np.sqrt(rng.chisquare(df=dim, size=dim))

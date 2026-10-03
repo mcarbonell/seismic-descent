@@ -1,9 +1,16 @@
 """Golden regression tests: freeze the historical trajectory of reproducible configs.
 
-The constants below were generated from the code at HEAD (2026-10-03, post-audit) with
+The constants below are generated from the code at HEAD (2026-10-03, post-audit) with
 the exact configs shown. If a refactor or dependency upgrade changes the dynamics, these
 tests fail — which is exactly what the repository's traceability rule demands: changes to
 the algorithm's reproducible behavior must never be silent.
+
+Note (2026-10-03): the ORF golden was regenerated when `np.linalg.qr` was replaced by the
+deterministic modified Gram-Schmidt in `seismic_descent.orf` (CI fix). LAPACK's QR output
+varies in the last ulp (±1e-15) across BLAS builds and the optimizer amplified that noise
+into O(1) differences, so the ORF trajectory was only reproducible on the reference build.
+The construction is now BLAS-free and the goldens below reproduce bit-identically across
+platforms, Python versions and numpy builds (guarded by `test_orf_construction_hash`).
 """
 import numpy as np
 import pytest
@@ -13,13 +20,13 @@ from seismic_descent.core import seismic_swarm
 from seismic_descent.functions import RASTRIGIN, ACKLEY, SPHERE
 
 GOLDENS = {
-    ("v23", "rastrigin5d", "orf"): 9.631750941793854,
+    ("v23", "rastrigin5d", "orf"): 2.1586721330626375,
     ("v23", "ackley10d", "lissajous"): 19.983915274686087,
     ("v23", "sphere5d", "rff"): 0.019441366205003953,
     ("v20", "sphere2d", "rff"): 0.0005662477185043842,
 }
 
-_RTOL = 1e-9  # bit-exact on the reference platform; tolerance for BLAS noise elsewhere
+_RTOL = 1e-9  # exact on every tested platform; tolerance guards against BLAS noise in the pipeline
 
 
 def test_v23_rastrigin_5d_orf_golden():
